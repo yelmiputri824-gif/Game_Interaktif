@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ular Tangga Edukasi 3D SD</title>
+    <!-- Favicon dengan Logo Kustom -->
+    <link rel="icon" type="image/png" href="https://iili.io/By8FQ7s.png">
+    <link rel="apple-touch-icon" href="https://iili.io/By8FQ7s.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Three.js CDN -->
@@ -106,6 +109,11 @@
                 <button id="btn-music" class="glass-panel hover:bg-slate-700/80 p-1.5 rounded-lg transition duration-200 text-emerald-400 shadow flex items-center gap-1 text-[11px] font-semibold active:scale-95" title="Musik Background">
                     <i id="music-icon" class="fa-solid fa-music"></i>
                     <span class="hidden md:inline">Musik</span>
+                </button>
+                <!-- Tombol Fullscreen / Tampilan Penuh -->
+                <button id="btn-fullscreen" class="glass-panel hover:bg-slate-700/80 p-1.5 rounded-lg transition duration-200 text-pink-400 shadow flex items-center gap-1 text-[11px] font-semibold active:scale-95" title="Layar Penuh">
+                    <i id="fullscreen-icon" class="fa-solid fa-expand"></i>
+                    <span class="hidden md:inline">Layar Penuh</span>
                 </button>
                 <button id="btn-camera-reset" class="glass-panel hover:bg-slate-700/80 p-1.5 rounded-lg transition duration-200 text-yellow-400 shadow flex items-center gap-1 text-[11px] font-semibold active:scale-95" title="Reset Kamera">
                     <i class="fa-solid fa-video"></i>
@@ -1752,6 +1760,36 @@
             const btnCamReset = document.getElementById('btn-camera-reset');
             if (btnCamReset) {
                 btnCamReset.onclick = () => onWindowResize();
+            }
+
+            // Tombol Layar Penuh (Fullscreen)
+            const btnFullscreen = document.getElementById('btn-fullscreen');
+            if (btnFullscreen) {
+                btnFullscreen.onclick = async () => {
+                    try {
+                        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                            const docEl = document.documentElement;
+                            if (docEl.requestFullscreen) {
+                                await docEl.requestFullscreen();
+                            } else if (docEl.webkitRequestFullscreen) {
+                                await docEl.webkitRequestFullscreen();
+                            }
+                            const icon = document.getElementById('fullscreen-icon');
+                            if (icon) icon.className = 'fa-solid fa-compress';
+                        } else {
+                            if (document.exitFullscreen) {
+                                await document.exitFullscreen();
+                            } else if (document.webkitExitFullscreen) {
+                                await document.webkitExitFullscreen();
+                            }
+                            const icon = document.getElementById('fullscreen-icon');
+                            if (icon) icon.className = 'fa-solid fa-expand';
+                        }
+                    } catch (err) {
+                        console.warn("Fullscreen permission denied or not supported in this iframe window:", err);
+                        showNotification("Sistem", "Fitur Layar Penuh dibatasi oleh izin browser/iframe ini.", "fa-expand");
+                    }
+                };
             }
 
             // Mode Guru Listeners
