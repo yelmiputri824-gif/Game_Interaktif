@@ -2,1327 +2,1855 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Petualangan Ular Tangga - Sejarah Kelahiran Pancasila</title>
-    
-    <!-- Tailwind CSS for styling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ular Tangga Edukasi 3D SD</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Poppins & Fredoka -->
-    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- FontAwesome icons -->
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <style>
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            user-select: none;
+            overflow: hidden;
+            background-color: #0f172a;
             touch-action: manipulation;
         }
         .font-game {
-            font-family: 'Fredoka', cursive;
+            font-family: 'Fredoka One', cursive;
         }
-        .board-container {
-            aspect-ratio: 1 / 1;
-            max-width: 520px;
-            width: 100%;
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
         }
-        .dice-3d {
-            transition: transform 0.8s ease-out;
-            transform-style: preserve-3d;
+        .ui-overlay {
+            position: relative;
+            z-index: 10;
+            pointer-events: none;
         }
-        /* Custom scrollbar */
+        .interactive {
+            pointer-events: auto;
+        }
+        /* Custom Scrollbar for Quiz modal */
         ::-webkit-scrollbar {
-            width: 5px;
+            width: 6px;
         }
         ::-webkit-scrollbar-track {
             background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
         }
         ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 4px;
+            background: #3b82f6;
+            border-radius: 8px;
+        }
+        /* Glassmorphism Effect */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(12px);
+            border: 1.5px solid rgba(255, 255, 255, 0.15);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.75);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        /* Bounce Animation */
+        @keyframes floatSlow {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+        .animate-float {
+            animation: floatSlow 3s ease-in-out infinite;
         }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between selection:bg-amber-500 selection:text-slate-950">
+<body class="text-white">
 
-    <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md sticky top-0 z-30 px-3 py-2.5">
-        <div class="max-w-md md:max-w-2xl mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <div class="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-red-600 flex items-center justify-center text-white font-bold text-sm md:text-base shadow-lg shadow-amber-500/20">
-                    <i class="fa-solid fa-flag"></i>
-                </div>
-                <div>
-                    <h1 class="text-xs md:text-sm font-bold font-game leading-tight text-slate-100">Ular Tangga Pancasila</h1>
-                    <span id="gameModeBadge" class="text-[10px] text-amber-400 font-semibold block">Pilih Pemain</span>
-                </div>
-            </div>
+    <!-- 3D Canvas Container -->
+    <div id="canvas-container"></div>
 
-            <!-- Header Action Buttons -->
-            <div class="flex items-center space-x-2">
-                <button onclick="goToMenuConfirm()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition border border-slate-700" title="Menu Utama">
-                    <i class="fa-solid fa-house text-xs md:text-sm"></i>
-                </button>
-                <button id="fullscreenToggle" onclick="toggleFullscreen()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition border border-slate-700" title="Layar Full">
-                    <i id="fullscreenIcon" class="fa-solid fa-expand text-xs md:text-sm"></i>
-                </button>
-                <button onclick="showScoreModal()" class="bg-slate-800 hover:bg-slate-700 text-amber-400 w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition border border-slate-700" title="Lihat Skor">
-                    <i class="fa-solid fa-trophy text-xs md:text-sm"></i>
-                </button>
-                <button id="soundToggle" onclick="toggleSound()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition border border-slate-700" title="Suara">
-                    <i id="soundIcon" class="fa-solid fa-volume-high text-xs md:text-sm"></i>
-                </button>
-                <button onclick="showInfoModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition border border-slate-700" title="Petunjuk">
-                    <i class="fa-solid fa-circle-info text-xs md:text-sm"></i>
-                </button>
-                <button onclick="restartGameConfirm()" class="bg-slate-800 hover:bg-slate-700 text-rose-400 w-8 h-8 md:w-9 md:h-9 rounded-xl flex items-center justify-center transition border border-slate-700" title="Ulang Game">
-                    <i class="fa-solid fa-rotate-right text-xs md:text-sm"></i>
-                </button>
-            </div>
-        </div>
-    </header>
-
-    <main class="max-w-md md:max-w-2xl mx-auto w-full p-2 sm:p-3 flex-1 flex flex-col justify-start space-y-3">
+    <!-- UI Overlay -->
+    <div class="ui-overlay w-full h-screen flex flex-col justify-between p-1.5 sm:p-3">
         
-        <!-- Player Info Cards (Grid 2 hingga 4 Pemain) -->
-        <div id="playerCardsContainer" class="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <!-- Dynamic player cards generated via JS -->
+        <!-- Top Bar: Header, Turn Display Center, & Controls (Lebih Ringkas & Kecil) -->
+        <div class="flex justify-between items-center w-full max-w-7xl mx-auto interactive gap-1">
+            <!-- Game Title & Custom Image Logo -->
+            <div class="flex items-center gap-1.5 glass-panel px-2 py-1 rounded-lg shadow-lg">
+                <img src="https://iili.io/By8FQ7s.png" alt="Logo Game" class="w-7 h-7 sm:w-8 sm:h-8 object-contain rounded-md shrink-0 shadow" onerror="this.onerror=null; this.src='https://placehold.co/64x64/f59e0b/ffffff?text=UT3D';">
+                <div class="hidden sm:block">
+                    <h1 class="font-game text-xs text-yellow-400 leading-tight">SDN 22 TANAH KERAS</h1>
+                    <p class="text-[9px] text-slate-300 font-medium">Ular Tangga 3D</p>
+                </div>
+            </div>
+
+            <!-- Turn Banner Header (Diperkecil) -->
+            <div class="glass-panel px-2.5 py-1 rounded-xl shadow-lg text-center border-t-2 border-yellow-400 min-w-[100px] sm:min-w-[130px]">
+                <div class="text-[8px] sm:text-[10px] text-slate-300 font-bold uppercase tracking-wider">GILIRAN</div>
+                <div id="turn-display" class="font-game text-xs sm:text-base text-yellow-400 leading-tight">Pemain 1</div>
+            </div>
+
+            <!-- Settings / Reset Buttons (Lebih Ramping) -->
+            <div class="flex gap-1">
+                <!-- Tombol Musik Super Mario -->
+                <button id="btn-music" class="glass-panel hover:bg-slate-700/80 p-1.5 rounded-lg transition duration-200 text-emerald-400 shadow flex items-center gap-1 text-[11px] font-semibold active:scale-95" title="Musik Background">
+                    <i id="music-icon" class="fa-solid fa-music"></i>
+                    <span class="hidden md:inline">Musik</span>
+                </button>
+                <button id="btn-camera-reset" class="glass-panel hover:bg-slate-700/80 p-1.5 rounded-lg transition duration-200 text-yellow-400 shadow flex items-center gap-1 text-[11px] font-semibold active:scale-95" title="Reset Kamera">
+                    <i class="fa-solid fa-video"></i>
+                    <span class="hidden md:inline">Reset</span>
+                </button>
+                <button id="btn-teacher-mode" class="glass-panel hover:bg-slate-700/80 p-1.5 rounded-lg transition duration-200 text-purple-400 shadow flex items-center gap-1 text-[11px] font-semibold active:scale-95" title="Mode Guru">
+                    <i class="fa-solid fa-chalkboard-user"></i>
+                    <span class="hidden md:inline">Mode Guru</span>
+                </button>
+                <button id="btn-settings" class="glass-panel hover:bg-slate-700/80 p-1.5 rounded-lg transition duration-200 text-cyan-400 shadow flex items-center gap-1 text-[11px] font-semibold active:scale-95" title="Pengaturan">
+                    <i class="fa-solid fa-gear"></i>
+                    <span class="hidden md:inline">Pengaturan</span>
+                </button>
+            </div>
         </div>
 
-        <!-- Board Game Canvas Box -->
-        <div class="relative mx-auto board-container">
-            <!-- SVG Overlay for Ladders and Snakes -->
-            <svg id="svgOverlay" class="absolute inset-0 w-full h-full pointer-events-none z-10"></svg>
+        <!-- NOTIFIKASI HASIL DADU (POP-UP LALU HILANG) -->
+        <div id="dice-notification" class="pointer-events-none fixed top-12 left-1/2 -translate-x-1/2 z-40 hidden transition-all duration-300 transform scale-90 opacity-0">
+            <div class="glass-panel px-4 py-2 rounded-xl border border-yellow-400 shadow-xl flex items-center gap-2 bg-slate-900/90 backdrop-blur-xl">
+                <div id="dice-notif-icon" class="w-8 h-8 rounded-lg bg-gradient-to-tr from-amber-400 to-yellow-300 flex items-center justify-center text-slate-950 font-game text-base shadow shrink-0">
+                    <i class="fa-solid fa-dice-six"></i>
+                </div>
+                <div>
+                    <div id="dice-notif-player" class="text-[9px] font-bold uppercase tracking-wider text-cyan-300">Pemain 1</div>
+                    <div id="dice-notif-text" class="font-game text-xs sm:text-sm text-white">Dadu <span id="dice-notif-val" class="text-yellow-400 font-extrabold text-base">6</span>!</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Column: 4 Player Status Floating Vertically (Sangat Ringkas) -->
+        <div class="fixed left-1.5 sm:left-3 top-12 sm:top-14 z-20 flex flex-col gap-1 max-w-[100px] sm:max-w-[120px] w-full interactive">
+            <!-- Player 1 Status -->
+            <div id="p1-card" class="glass-panel p-1 rounded-lg border-l-2 border-cyan-400 transition-all duration-300 shadow flex items-center gap-1">
+                <div class="w-5 h-5 rounded bg-cyan-500/20 border border-cyan-400 flex items-center justify-center text-cyan-400 font-game text-[9px] shrink-0">P1</div>
+                <div class="overflow-hidden">
+                    <div id="p1-label" class="text-[8px] sm:text-[10px] text-cyan-300 font-bold truncate">Pemain 1</div>
+                    <div id="p1-pos" class="font-game text-[9px] text-white">Kt: 1</div>
+                    <div id="p1-score" class="text-[8px] text-slate-300 font-semibold">Skor: 0</div>
+                </div>
+            </div>
+
+            <!-- Player 2 Status -->
+            <div id="p2-card" class="glass-panel p-1 rounded-lg border-l-2 border-rose-500 transition-all duration-300 opacity-50 shadow flex items-center gap-1">
+                <div class="w-5 h-5 rounded bg-rose-500/20 border border-rose-400 flex items-center justify-center text-rose-400 font-game text-[9px] shrink-0">P2</div>
+                <div class="overflow-hidden">
+                    <div id="p2-label" class="text-[8px] sm:text-[10px] text-rose-300 font-bold truncate">Pemain 2</div>
+                    <div id="p2-pos" class="font-game text-[9px] text-white">Kt: 1</div>
+                    <div id="p2-score" class="text-[8px] text-slate-300 font-semibold">Skor: 0</div>
+                </div>
+            </div>
+
+            <!-- Player 3 Status -->
+            <div id="p3-card" class="glass-panel p-1 rounded-lg border-l-2 border-amber-400 transition-all duration-300 opacity-50 shadow flex items-center gap-1">
+                <div class="w-5 h-5 rounded bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-400 font-game text-[9px] shrink-0">P3</div>
+                <div class="overflow-hidden">
+                    <div id="p3-label" class="text-[8px] sm:text-[10px] text-amber-300 font-bold truncate">Pemain 3</div>
+                    <div id="p3-pos" class="font-game text-[9px] text-white">Kt: 1</div>
+                    <div id="p3-score" class="text-[8px] text-slate-300 font-semibold">Skor: 0</div>
+                </div>
+            </div>
+
+            <!-- Player 4 Status -->
+            <div id="p4-card" class="glass-panel p-1 rounded-lg border-l-2 border-emerald-400 transition-all duration-300 opacity-50 shadow flex items-center gap-1">
+                <div class="w-5 h-5 rounded bg-emerald-500/20 border border-emerald-400 flex items-center justify-center text-emerald-400 font-game text-[9px] shrink-0">P4</div>
+                <div class="overflow-hidden">
+                    <div id="p4-label" class="text-[8px] sm:text-[10px] text-emerald-300 font-bold truncate">Pemain 4</div>
+                    <div id="p4-pos" class="font-game text-[9px] text-white">Kt: 1</div>
+                    <div id="p4-score" class="text-[8px] text-slate-300 font-semibold">Skor: 0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom Action Bar: Dice Button Ringkas -->
+        <div class="max-w-7xl mx-auto w-full flex items-center justify-center mb-1 interactive">
+            <button id="btn-roll" class="px-5 py-2.5 sm:px-6 sm:py-3 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-game text-xs sm:text-base rounded-xl shadow-lg border-b-2 border-emerald-700 active:translate-y-0.5 transition duration-150 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-dice text-sm sm:text-lg"></i>
+                <span id="btn-roll-text">Jawab Soal & Kocok Dadu</span>
+            </button>
+        </div>
+
+    </div>
+
+    <!-- MODAL: PRE-GAME SETUP / SETTINGS -->
+    <div id="modal-setup" class="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-3 overflow-y-auto">
+        <div class="glass-panel p-4 sm:p-6 rounded-2xl max-w-lg w-full border border-slate-700 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
+            <div class="text-center mb-3">
+                <div class="w-10 h-10 bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-900 font-game text-xl rounded-xl mx-auto flex items-center justify-center shadow mb-1">
+                    <i class="fa-solid fa-cubes-stacked"></i>
+                </div>
+                <h2 class="font-game text-lg sm:text-2xl text-yellow-400">Pengaturan Permainan</h2>
+                <p class="text-[10px] sm:text-xs text-slate-300">Pilih jumlah pemain, nama pemain, dan tingkat kelas</p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <!-- Jumlah Pemain -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">Jumlah Pemain</label>
+                    <div class="grid grid-cols-4 gap-1.5" id="player-count-selector">
+                        <button type="button" class="btn-pcount glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-count="1">1 (Bot)</button>
+                        <button type="button" class="btn-pcount glass-card py-1.5 rounded-lg border border-amber-400 bg-amber-400/20 text-amber-300 font-game text-[11px] text-center" data-count="2">2 Main</button>
+                        <button type="button" class="btn-pcount glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-count="3">3 Main</button>
+                        <button type="button" class="btn-pcount glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-count="4">4 Main</button>
+                    </div>
+                </div>
+
+                <!-- Input Nama Masing-Masing Pemain -->
+                <div class="space-y-1.5">
+                    <label class="block text-[10px] font-bold text-slate-300 uppercase tracking-wider">Nama Pemain</label>
+                    <div class="grid grid-cols-2 gap-1.5">
+                        <div>
+                            <span class="text-[9px] text-cyan-400 font-semibold block">Pemain 1</span>
+                            <input type="text" id="input-p1-name" value="Pemain 1" class="w-full bg-slate-800 border border-slate-700 text-white p-1.5 rounded text-[11px] font-semibold focus:border-cyan-400 outline-none">
+                        </div>
+                        <div id="p2-input-box">
+                            <span class="text-[9px] text-rose-400 font-semibold block">Pemain 2</span>
+                            <input type="text" id="input-p2-name" value="Pemain 2" class="w-full bg-slate-800 border border-slate-700 text-white p-1.5 rounded text-[11px] font-semibold focus:border-rose-400 outline-none">
+                        </div>
+                        <div id="p3-input-box" class="hidden">
+                            <span class="text-[9px] text-amber-400 font-semibold block">Pemain 3</span>
+                            <input type="text" id="input-p3-name" value="Pemain 3" class="w-full bg-slate-800 border border-slate-700 text-white p-1.5 rounded text-[11px] font-semibold focus:border-amber-400 outline-none">
+                        </div>
+                        <div id="p4-input-box" class="hidden">
+                            <span class="text-[9px] text-emerald-400 font-semibold block">Pemain 4</span>
+                            <input type="text" id="input-p4-name" value="Pemain 4" class="w-full bg-slate-800 border border-slate-700 text-white p-1.5 rounded text-[11px] font-semibold focus:border-emerald-400 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pilihan Kelas -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">Tingkat Kelas (SD)</label>
+                    <div class="grid grid-cols-3 sm:grid-cols-6 gap-1.5" id="grade-selector">
+                        <button class="btn-grade glass-card py-1.5 rounded-lg border border-amber-400 bg-amber-400/20 text-amber-300 font-game text-[11px] text-center" data-grade="1">Kelas 1</button>
+                        <button class="btn-grade glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-grade="2">Kelas 2</button>
+                        <button class="btn-grade glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-grade="3">Kelas 3</button>
+                        <button class="btn-grade glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-grade="4">Kelas 4</button>
+                        <button class="btn-grade glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-grade="5">Kelas 5</button>
+                        <button class="btn-grade glass-card py-1.5 rounded-lg border border-slate-700 text-slate-300 font-game text-[11px] text-center" data-grade="6">Kelas 6</button>
+                    </div>
+                </div>
+
+                <!-- Pilihan Mata Pelajaran -->
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-300 uppercase tracking-wider mb-1">Mata Pelajaran Utama</label>
+                    <select id="subject-select" class="w-full bg-slate-800 border border-slate-700 text-white p-2 rounded-lg font-semibold text-xs focus:border-amber-400 outline-none">
+                        <option value="all"> Semua Mata Pelajaran (Campuran)</option>
+                        <option value="matematika"> Matematika</option>
+                        <option value="ipas"> IPAS (IPA & IPS)</option>
+                        <option value="indonesia"> Bahasa Indonesia</option>
+                        <option value="pancasila"> Pendidikan Pancasila</option>
+                        <option value="seni"> Seni Budaya</option>
+                        <option value="pai"> Pendidikan Agama Islam (PAI) & Budi Pekerti</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Start Game Button -->
+            <button id="btn-start-game" class="mt-4 w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-game text-sm rounded-xl shadow active:scale-[0.98] transition duration-150">
+                <i class="fa-solid fa-play mr-1.5"></i> Mulai Petualangan
+            </button>
+        </div>
+    </div>
+
+    <!-- MODAL: QUIZ QUESTION (Mobile Popup Friendly) -->
+    <div id="modal-quiz" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden overflow-y-auto">
+        <div class="glass-panel p-5 sm:p-8 rounded-2xl sm:rounded-3xl max-w-2xl w-full border border-indigo-500/40 shadow-2xl relative my-auto max-h-[95vh] overflow-y-auto">
             
-            <!-- 10x10 Grid Board -->
-            <div id="boardGrid" class="grid grid-cols-10 grid-rows-10 w-full h-full rounded-2xl overflow-hidden border-2 border-amber-500/60 bg-slate-950 shadow-2xl gap-[1px] p-[1px]"></div>
-
-            <!-- Player Tokens Overlay (Up to 4 Players) -->
-            <div id="player1Token" class="absolute w-5 h-5 md:w-6 md:h-6 rounded-full bg-red-500 border-2 border-white shadow-xl flex items-center justify-center z-20 text-[9px] font-bold text-white transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="left: 5%; top: 95%;">1</div>
-            <div id="player2Token" class="absolute w-5 h-5 md:w-6 md:h-6 rounded-full bg-blue-500 border-2 border-white shadow-xl flex items-center justify-center z-20 text-[9px] font-bold text-white transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="left: 5%; top: 95%;">2</div>
-            <div id="player3Token" class="absolute w-5 h-5 md:w-6 md:h-6 rounded-full bg-emerald-500 border-2 border-white shadow-xl flex items-center justify-center z-20 text-[9px] font-bold text-white transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="left: 5%; top: 95%;">3</div>
-            <div id="player4Token" class="absolute w-5 h-5 md:w-6 md:h-6 rounded-full bg-purple-500 border-2 border-white shadow-xl flex items-center justify-center z-20 text-[9px] font-bold text-white transition-all duration-300 transform -translate-x-1/2 -translate-y-1/2 hidden" style="left: 5%; top: 95%;">4</div>
-        </div>
-
-        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-3 shadow-xl flex items-center justify-between space-x-3">
-            <!-- Turn Indicator -->
-            <div class="flex items-center space-x-2.5">
-                <div id="turnBadge" class="w-10 h-10 rounded-xl bg-red-600 flex items-center justify-center text-white text-base font-bold shadow-md">
-                    1
+            <!-- Quiz Header -->
+            <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-700 gap-2">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span id="quiz-subject-badge" class="px-2.5 py-0.5 bg-indigo-500/20 border border-indigo-400 text-indigo-300 text-[10px] sm:text-xs font-bold rounded-full uppercase tracking-wider">
+                        Matematika
+                    </span>
+                    <span id="quiz-grade-badge" class="px-2.5 py-0.5 bg-amber-500/20 border border-amber-400 text-amber-300 text-[10px] sm:text-xs font-bold rounded-full">
+                        Kelas 1
+                    </span>
                 </div>
-                <div>
-                    <div class="text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Giliran Bermain</div>
-                    <div id="turnPlayerName" class="text-xs md:text-sm font-bold text-slate-200">Pemain 1</div>
-                    <div id="turnPlayerPos" class="text-[10px] text-amber-400 font-bold">Petak 1</div>
+                <div class="text-slate-400 text-[10px] sm:text-xs font-semibold flex items-center gap-1 shrink-0">
+                    <i class="fa-solid fa-clock text-amber-400"></i> Kuis Dadu
                 </div>
             </div>
 
-            <!-- Roll Dice Button with Dice Visual -->
-            <button id="btnRoll" onclick="rollDice()" class="flex-1 max-w-[170px] bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-95 text-slate-950 font-bold py-2.5 px-3 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 transition font-game">
-                <div id="diceElement" class="w-7 h-7 bg-white text-slate-950 rounded-lg flex items-center justify-center font-extrabold text-sm shadow dice-3d">
-                    <span id="diceResultText"><i class="fa-solid fa-dice text-slate-800"></i></span>
-                </div>
-                <span class="text-xs md:text-sm tracking-wide">LEMPAR DADU</span>
-            </button>
-        </div>
-
-        <!-- Game History Log -->
-        <div class="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 h-24 overflow-y-auto space-y-1.5 shadow-inner">
-            <div class="text-[10px] uppercase font-bold text-slate-400 mb-1 flex items-center">
-                <i class="fa-solid fa-clock-rotate-left mr-1.5 text-amber-400"></i> Catatan Perjalanan
-            </div>
-            <div id="gameLog" class="space-y-1">
-                <p class="text-[11px] text-slate-400 italic">Selamat datang! Lempar dadu untuk memulai kuis Sejarah Kelahiran Pancasila.</p>
-            </div>
-        </div>
-
-    </main>
-
-    <!-- Start / Configuration Modal -->
-    <div id="startModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-3.5">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 max-w-md w-full text-center shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
-            <div class="w-14 h-14 bg-gradient-to-tr from-amber-500 to-red-600 rounded-2xl mx-auto flex items-center justify-center text-white text-2xl shadow-lg shadow-amber-500/20">
-                <i class="fa-solid fa-landmark"></i>
-            </div>
-            <div>
-                <h2 class="text-lg md:text-xl font-bold font-game text-slate-100">Sejarah Pancasila</h2>
-                <p class="text-xs text-slate-400 mt-0.5">Pengaturan Pemain (2 - 4 Pemain)</p>
+            <!-- Question Text -->
+            <div class="mb-4 sm:mb-6">
+                <h3 id="quiz-question" class="text-base sm:text-2xl font-bold text-white leading-snug sm:leading-relaxed">
+                    Berapakah hasil dari 5 + 3?
+                </h3>
             </div>
 
-            <!-- Choose Number of Players -->
-            <div class="space-y-1.5 text-left">
-                <label class="text-xs font-bold text-amber-400 block"><i class="fa-solid fa-users text-amber-400 mr-1"></i> Jumlah Pemain:</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button type="button" onclick="selectPlayerCount(2)" id="btnCount2" class="p-2 rounded-xl border text-xs font-bold bg-amber-500 border-amber-400 text-slate-950 shadow">2 Pemain</button>
-                    <button type="button" onclick="selectPlayerCount(3)" id="btnCount3" class="p-2 rounded-xl border text-xs font-bold bg-slate-800 border-slate-700 text-slate-300">3 Pemain</button>
-                    <button type="button" onclick="selectPlayerCount(4)" id="btnCount4" class="p-2 rounded-xl border text-xs font-bold bg-slate-800 border-slate-700 text-slate-300">4 Pemain</button>
-                </div>
+            <!-- Answer Options -->
+            <div id="quiz-options" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 mb-4 sm:mb-6">
+                <!-- Options injected via JS -->
             </div>
 
-            <!-- Custom Player Inputs -->
-            <div id="playerInputsContainer" class="space-y-2 text-left pt-1">
-                <!-- Dynamically populated in JS -->
+            <!-- Answer Feedback Message -->
+            <div id="quiz-feedback" class="hidden p-3 sm:p-4 rounded-xl text-center font-game text-sm sm:text-lg border transition-all duration-300">
+                <!-- Injected via JS -->
             </div>
-
-            <!-- Quick Preset Shortcuts -->
-            <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                <button type="button" onclick="setPresetMode('vsBot')" class="text-amber-400 hover:underline"><i class="fa-solid fa-robot mr-1"></i>1 vs Bot</button>
-                <button type="button" onclick="setPresetMode('allHumans')" class="text-blue-400 hover:underline"><i class="fa-solid fa-user-group mr-1"></i>Semua Manusia</button>
-                <button type="button" onclick="setPresetMode('allBots')" class="text-emerald-400 hover:underline"><i class="fa-solid fa-play mr-1"></i>Simulasi Bot</button>
-            </div>
-
-            <button onclick="startGameFromConfig()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:scale-98 text-slate-950 font-bold py-3 rounded-xl shadow-lg transition font-game text-xs md:text-sm">
-                MULAI PERMAINAN <i class="fa-solid fa-play ml-1"></i>
-            </button>
         </div>
     </div>
 
-    <!-- Question Quiz Modal -->
-    <div id="questionModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-3.5 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 md:p-6 max-w-md w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
-            <div class="flex items-center space-x-3 border-b border-slate-800 pb-3">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center flex-shrink-0">
-                    <i id="modalEventIcon" class="fa-solid fa-brain text-amber-400 text-lg"></i>
-                </div>
-                <div>
-                    <h3 id="modalEventTitle" class="text-sm md:text-base font-bold font-game text-amber-400">Kuis Sejarah Pancasila</h3>
-                    <p id="modalEventDesc" class="text-[11px] text-slate-300">Jawab pertanyaan untuk melanjutkan permainan.</p>
-                </div>
-            </div>
-
-            <div class="space-y-3">
-                <p id="questionText" class="text-xs md:text-sm font-semibold text-slate-100 leading-relaxed bg-slate-950/60 p-3 rounded-2xl border border-slate-800">
-                    Soal akan muncul di sini...
-                </p>
-
-                <div id="optionsContainer" class="space-y-2">
-                    <!-- Dynamic Answer Option Buttons -->
-                </div>
-
-                <div id="feedbackBox" class="hidden"></div>
-            </div>
-
-            <button id="btnContinue" onclick="closeQuestionModal()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs md:text-sm font-game shadow-lg hidden">
-                LANJUTKAN PERMAINAN
-            </button>
-        </div>
-    </div>
-
-    <!-- Victory Modal -->
-    <div id="victoryModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-amber-500/30 rounded-3xl p-6 max-w-sm w-full text-center shadow-2xl space-y-4">
-            <div class="w-20 h-20 bg-gradient-to-tr from-amber-400 to-amber-600 rounded-3xl mx-auto flex items-center justify-center text-slate-950 text-4xl shadow-xl shadow-amber-500/20 animate-bounce">
+    <!-- MODAL: GAME OVER / WINNER -->
+    <div id="modal-winner" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="glass-panel p-8 rounded-3xl max-w-md w-full border border-yellow-400 text-center shadow-2xl">
+            <div class="w-20 h-20 bg-gradient-to-tr from-amber-400 to-yellow-300 text-slate-950 font-game text-4xl rounded-3xl mx-auto flex items-center justify-center shadow-xl mb-4 animate-bounce">
                 <i class="fa-solid fa-trophy"></i>
             </div>
-            <div>
-                <h2 id="winnerTitle" class="text-xl font-bold font-game text-amber-400">Pemain Menang! 🎉</h2>
-                <p id="winnerSub" class="text-xs text-slate-300 mt-1">Selamat! Kamu berhasil menguasai Sejarah Kelahiran Pancasila!</p>
-            </div>
-
-            <div class="bg-slate-950/60 border border-slate-800 p-3.5 rounded-2xl space-y-2 text-xs">
-                <div class="flex justify-between items-center">
-                    <span class="text-slate-400">Skor Pemenang:</span>
-                    <span id="winP1Score" class="font-bold text-amber-400">0 Pts</span>
-                </div>
-                <div class="flex justify-between items-center">
-                    <span id="winP2Name" class="text-slate-400">Posisi Akhir:</span>
-                    <span id="winP2Score" class="font-bold text-amber-400">Petak 100</span>
-                </div>
-            </div>
-
-            <button onclick="resetToMenu()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3 rounded-xl shadow-lg transition font-game text-xs md:text-sm">
-                KEMBALI KE MENU UTAMA
-            </button>
-        </div>
-    </div>
-
-    <!-- Info / Rules Modal -->
-    <div id="infoModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
-                <h3 class="text-sm font-bold font-game text-amber-400 flex items-center">
-                    <i class="fa-solid fa-circle-info mr-2"></i> Aturan Permainan
-                </h3>
-                <button onclick="closeInfoModal()" class="text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
+            <h2 class="font-game text-3xl text-yellow-400 mb-2">Selamat!</h2>
+            <p id="winner-text" class="text-slate-200 text-lg font-semibold mb-6">Pemain 1 Berhasil Mencapai Kotak 100!</p>
             
-            <div class="space-y-2.5 text-xs text-slate-300 leading-relaxed">
-                <p><b class="text-white">1. Lempar Dadu:</b> Tekan tombol LEMPAR DADU untuk melangkah.</p>
-                <p><b class="text-white">2. Kuis Petak (+10 Pts):</b> Setiap mendarat di petak, kamu harus menjawab soal Sejarah Pancasila.</p>
-                <p><b class="text-emerald-400">3. Jawaban BENAR:</b> Mendapatkan <b>+10 Poin</b> dan berhak <b>LANJUT MAIN LAGI</b>!</p>
-                <p><b class="text-rose-400">4. Jawaban SALAH:</b> Mendapatkan <b>0 Poin</b> dan giliran langsung <b>BERPINDAH SEGERA</b> ke lawan.</p>
-                <p><b class="text-white">5. Tangga & Ular:</b> Tangga membantu naik lebih cepat, sedangkan Ular akan menurunkan posisi jika salah menjawab tantangan.</p>
-            </div>
-
-            <button onclick="closeInfoModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs">
-                SAYA MENGERTI
+            <button id="btn-restart" class="w-full py-4 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-game text-lg rounded-2xl shadow-lg border-b-4 border-emerald-700">
+                <i class="fa-solid fa-rotate-right mr-2"></i> Main Lagi
             </button>
         </div>
     </div>
 
-    <!-- Score Board Modal -->
-    <div id="scoreModal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 max-w-sm w-full shadow-2xl space-y-4">
-            <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
-                <h3 class="text-sm md:text-base font-bold font-game text-amber-400 flex items-center">
-                    <i class="fa-solid fa-trophy mr-2 text-amber-400"></i> Papan Skor Sementara
-                </h3>
-                <button onclick="closeScoreModal()" class="text-slate-400 hover:text-white">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
+    <!-- MODAL: MODE GURU (TAMBAH SOAL KUSTOM) -->
+    <div id="modal-teacher" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-3 sm:p-4 hidden overflow-y-auto">
+        <div class="glass-panel p-5 sm:p-6 rounded-2xl max-w-lg w-full border border-purple-500/40 shadow-2xl relative my-auto max-h-[92vh] overflow-y-auto">
             
-            <div id="modalScoreList" class="space-y-2.5">
-                <!-- Dynamic Player Score Cards -->
-            </div>
-
-            <div id="scoreStatusMessage" class="bg-slate-800/80 border border-slate-700/80 p-2.5 rounded-xl text-center text-xs font-medium text-amber-300">
-                Skor saat ini seimbang!
-            </div>
-
-            <button onclick="closeScoreModal()" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-2.5 rounded-xl text-xs md:text-sm font-game shadow-lg">
-                TUTUP PAPAN SKOR
-            </button>
-        </div>
-    </div>
-
-    <script>
-        function toggleFullscreen() {
-            try {
-                if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-                    const docEl = document.documentElement;
-                    let promise;
-                    if (docEl.requestFullscreen) {
-                        promise = docEl.requestFullscreen();
-                    } else if (docEl.webkitRequestFullscreen) {
-                        promise = docEl.webkitRequestFullscreen();
-                    } else if (docEl.msRequestFullscreen) {
-                        promise = docEl.msRequestFullscreen();
-                    }
-
-                    if (promise && typeof promise.catch === 'function') {
-                        promise.catch(err => {
-                            console.warn("Fullscreen requested but disallowed by frame permissions policy:", err);
-                        });
-                    }
-                } else {
-                    let promise;
-                    if (document.exitFullscreen) {
-                        promise = document.exitFullscreen();
-                    } else if (document.webkitExitFullscreen) {
-                        promise = document.webkitExitFullscreen();
-                    } else if (document.msExitFullscreen) {
-                        promise = document.msExitFullscreen();
-                    }
-
-                    if (promise && typeof promise.catch === 'function') {
-                        promise.catch(err => {
-                            console.warn("Error exiting fullscreen:", err);
-                        });
-                    }
-                }
-            } catch (err) {
-                console.warn("Fullscreen action disallowed by permissions policy:", err);
-            }
-        }
-
-        function updateFullscreenIcon() {
-            const icon = document.getElementById('fullscreenIcon');
-            if (!icon) return;
-            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-                icon.className = 'fa-solid fa-compress text-xs md:text-sm';
-            } else {
-                icon.className = 'fa-solid fa-expand text-xs md:text-sm';
-            }
-        }
-
-        document.addEventListener('fullscreenchange', updateFullscreenIcon);
-        document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
-
-        /* Web Audio API Synthesizer */
-        let audioCtx = null;
-        let soundEnabled = true;
-
-        function initAudio() {
-            if (!audioCtx) {
-                const AudioContext = window.AudioContext || window.webkitAudioContext;
-                if (AudioContext) {
-                    audioCtx = new AudioContext();
-                }
-            }
-            if (audioCtx && audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
-        }
-
-        function toggleSound() {
-            soundEnabled = !soundEnabled;
-            const soundIcon = document.getElementById('soundIcon');
-            const soundToggle = document.getElementById('soundToggle');
-            if (soundIcon) {
-                if (soundEnabled) {
-                    soundIcon.className = 'fa-solid fa-volume-high text-xs md:text-sm';
-                    if (soundToggle) soundToggle.classList.remove('opacity-50');
-                } else {
-                    soundIcon.className = 'fa-solid fa-volume-xmark text-xs md:text-sm';
-                    if (soundToggle) soundToggle.classList.add('opacity-50');
-                }
-            }
-        }
-
-        function playSound(type) {
-            if (!soundEnabled) return;
-            initAudio();
-            if (!audioCtx) return;
-
-            const now = audioCtx.currentTime;
-
-            try {
-                if (type === 'dice') {
-                    for (let i = 0; i < 4; i++) {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(150 + Math.random() * 200, now + i * 0.08);
-                        gain.gain.setValueAtTime(0.1, now + i * 0.08);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.05);
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
-                        osc.start(now + i * 0.08);
-                        osc.stop(now + i * 0.08 + 0.05);
-                    }
-                } else if (type === 'correct') {
-                    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-                    notes.forEach((freq, idx) => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
-                        gain.gain.setValueAtTime(0.15, now + idx * 0.08);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.15);
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
-                        osc.start(now + idx * 0.08);
-                        osc.stop(now + idx * 0.08 + 0.15);
-                    });
-                } else if (type === 'wrong') {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(160, now);
-                    osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
-                    gain.gain.setValueAtTime(0.2, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.start(now);
-                    osc.stop(now + 0.3);
-                } else if (type === 'ladder') {
-                    const freqs = [261.63, 329.63, 392.00, 523.25];
-                    freqs.forEach((f, i) => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = 'sine';
-                        osc.frequency.setValueAtTime(f, now + i * 0.07);
-                        gain.gain.setValueAtTime(0.12, now + i * 0.07);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.1);
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
-                        osc.start(now + i * 0.07);
-                        osc.stop(now + i * 0.07 + 0.1);
-                    });
-                } else if (type === 'snake') {
-                    const osc = audioCtx.createOscillator();
-                    const gain = audioCtx.createGain();
-                    osc.type = 'sawtooth';
-                    osc.frequency.setValueAtTime(400, now);
-                    osc.frequency.exponentialRampToValueAtTime(120, now + 0.4);
-                    gain.gain.setValueAtTime(0.15, now);
-                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
-                    osc.connect(gain);
-                    gain.connect(audioCtx.destination);
-                    osc.start(now);
-                    osc.stop(now + 0.4);
-                } else if (type === 'win') {
-                    const notes = [523.25, 659.25, 783.99, 1046.50];
-                    notes.forEach((f, i) => {
-                        const osc = audioCtx.createOscillator();
-                        const gain = audioCtx.createGain();
-                        osc.type = 'triangle';
-                        osc.frequency.setValueAtTime(f, now + i * 0.12);
-                        gain.gain.setValueAtTime(0.2, now + i * 0.12);
-                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.12 + 0.25);
-                        osc.connect(gain);
-                        gain.connect(audioCtx.destination);
-                        osc.start(now + i * 0.12);
-                        osc.stop(now + i * 0.12 + 0.25);
-                    });
-                }
-            } catch(e) {
-                console.warn("Audio play error:", e);
-            }
-        }
-
-        const BOARD_SIZE = 100;
-        let selectedPlayerCount = 2;
-        let currentPlayerIdx = 0;
-        let isRolling = false;
-        let isModalOpen = false;
-        let pendingMove = null;
-        let currentQuestion = null;
-        let lastAnswerWasCorrect = false;
-
-        const PLAYER_CONFIGS = [
-            { id: 1, defaultName: "Pemain 1", color: "red", bgClass: "bg-red-600", borderClass: "border-red-500", textClass: "text-red-400", hex: "#ef4444" },
-            { id: 2, defaultName: "Garuda Bot", color: "blue", bgClass: "bg-blue-600", borderClass: "border-blue-500", textClass: "text-blue-400", hex: "#3b82f6" },
-            { id: 3, defaultName: "Pemain 3", color: "emerald", bgClass: "bg-emerald-600", borderClass: "border-emerald-500", textClass: "text-emerald-400", hex: "#10b981" },
-            { id: 4, defaultName: "Pemain 4", color: "purple", bgClass: "bg-purple-600", borderClass: "border-purple-500", textClass: "text-purple-400", hex: "#a855f7" }
-        ];
-
-        let players = [];
-
-        const ladders = [
-            { start: 4, end: 16 },
-            { start: 12, end: 33 },
-            { start: 21, end: 42 },
-            { start: 28, end: 55 },
-            { start: 36, end: 67 },
-            { start: 51, end: 72 }
-        ];
-
-        const snakes = [
-            { start: 25, end: 8 },
-            { start: 37, end: 18 },
-            { start: 48, end: 31 },
-            { start: 62, end: 41 },
-            { start: 76, end: 54 }
-        ];
-
-        const questions = [
-            {
-                q: "Siapakah ketua dari BPUPKI (Dokuritsu Junbi Cosakai)?",
-                options: ["Ir. Soekarno", "Dr. K.R.T. Radjiman Wedyodiningrat", "Drs. Mohammad Hatta", "Mr. Muhammad Yamin"],
-                answer: 1,
-                explanation: "Dr. K.R.T. Radjiman Wedyodiningrat ditunjuk sebagai ketua BPUPKI yang diresmikan pada 29 April 1945."
-            },
-            {
-                q: "Kapan tanggal dilaksanakannya Sidang Pertama BPUPKI?",
-                options: ["29 Mei - 1 Juni 1945", "10 - 17 Juli 1945", "17 Agustus 1945", "18 Agustus 1945"],
-                answer: 0,
-                explanation: "Sidang pertama BPUPKI berlangsung dari tanggal 29 Mei hingga 1 Juni 1945 untuk membahas dasar negara."
-            },
-            {
-                q: "Tokoh yang mengusulkan nama 'Pancasila' pada tanggal 1 Juni 1945 adalah...",
-                options: ["Mr. Soepomo", "Ir. Soekarno", "Mr. Muhammad Yamin", "K.H. Wahid Hasyim"],
-                answer: 1,
-                explanation: "Ir. Soekarno menyampaikan pidato rumusan dasar negara dan mengusulkan nama Pancasila pada 1 Juni 1945."
-            },
-            {
-                q: "Setiap tanggal berapakah kita memperingati Hari Lahir Pancasila?",
-                options: ["17 Agustus", "1 Juni", "18 Agustus", "1 Oktober"],
-                answer: 1,
-                explanation: "Hari Lahir Pancasila diperingati setiap tanggal 1 Juni berdasarkan pidato bersejarah Ir. Soekarno tahun 1945."
-            },
-            {
-                q: "Panitia Sembilan dibentuk untuk menyempurnakan usulan dasar negara. Siapakah ketua Panitia Sembilan?",
-                options: ["Drs. Mohammad Hatta", "Ir. Soekarno", "Mr. A.A. Maramis", "Mr. Achmad Soebardjo"],
-                answer: 1,
-                explanation: "Panitia Sembilan diketuai oleh Ir. Soekarno dan berhasil merumuskan Piagam Jakarta."
-            },
-            {
-                q: "Hasil rumusan dasar negara oleh Panitia Sembilan pada 22 Juni 1945 dinamakan...",
-                options: ["UUD 1945", "Piagam Jakarta (Jakarta Charter)", "Teks Proklamasi", "Sumpah Pemuda"],
-                answer: 1,
-                explanation: "Piagam Jakarta (Jakarta Charter) dirumuskan oleh Panitia Sembilan pada tanggal 22 Juni 1945."
-            },
-            {
-                q: "Kapan Pancasila secara resmi disahkan sebagai Dasar Negara Indonesia oleh PPKI?",
-                options: ["1 Juni 1945", "17 Agustus 1945", "18 Agustus 1945", "22 Juni 1945"],
-                answer: 2,
-                explanation: "PPKI mengesahkan Pancasila sebagai dasar negara dalam Pembukaan UUD 1945 pada tanggal 18 Agustus 1945."
-            },
-            {
-                q: "Tokoh yang menyampaikan usulan dasar negara pada hari pertama sidang BPUPKI (29 Mei 1945) adalah...",
-                options: ["Mr. Muhammad Yamin", "Prof. Dr. Soepomo", "Ir. Soekarno", "Drs. Mohammad Hatta"],
-                answer: 0,
-                explanation: "Mr. Muhammad Yamin menyampaikan lisan dan tertulis usulan dasar negara pada tanggal 29 Mei 1945."
-            },
-            {
-                q: "Prof. Dr. Soepomo menyampaikan usulan dasar negara pada sidang BPUPKI pada tanggal...",
-                options: ["29 Mei 1945", "31 Mei 1945", "1 Juni 1945", "22 Juni 1945"],
-                answer: 1,
-                explanation: "Prof. Dr. Soepomo menyampaikan paham negara kesatuan dan usulan dasar negara pada 31 Mei 1945."
-            },
-            {
-                q: "BPUPKI kepanjangan dari...",
-                options: ["Badan Penyelidik Usaha-usaha Persiapan Kemerdekaan Indonesia", "Badan Pengembang Usaha Pemuda Kemerdekaan Indonesia", "Badan Panitia Usaha Pelaksana Kemerdekaan Indonesia", "Badan Penyelaras Utusan Persiapan Kemerdekaan Indonesia"],
-                answer: 0,
-                explanation: "BPUPKI adalah Badan Penyelidik Usaha-Usaha Persiapan Kemerdekaan Indonesia."
-            },
-            {
-                q: "Perubahan sila pertama pada Piagam Jakarta menjadi 'Ketuhanan Yang Maha Esa' bertujuan untuk...",
-                options: ["Menyenangkan penjajah", "Menjaga persatuan dan kesatuan bangsa Indonesia", "Mempercepat sidang PPKI", "Memenuhi perintah Jepang"],
-                answer: 1,
-                explanation: "Perubahan sila pertama demi menjaga persatuan dan kesatuan segenap rakyat Indonesia yang beranekaragam."
-            },
-            {
-                q: "Setelah BPUPKI dibubarkan, dibentuklah PPKI. Apakah kepanjangan dari PPKI?",
-                options: ["Panitia Pelaksana Kemerdekaan Indonesia", "Panitia Persiapan Kemerdekaan Indonesia", "Perhimpunan Persiapan Kemerdekaan Indonesia", "Panitia Penyelenggara Kemerdekaan Indonesia"],
-                answer: 1,
-                explanation: "PPKI adalah Panitia Persiapan Kemerdekaan Indonesia (Dokuritsu Junbi Inkai)."
-            },
-            {
-                q: "Siapakah yang ditunjuk sebagai ketua PPKI?",
-                options: ["Drs. Mohammad Hatta", "Ir. Soekarno", "Radjiman Wedyodiningrat", "Sutan Sjahrir"],
-                answer: 1,
-                explanation: "PPKI diketuai oleh Ir. Soekarno dan didampingi oleh Drs. Mohammad Hatta sebagai wakil ketua."
-            },
-            {
-                q: "Sikap keteladanan para pahlawan perumus Pancasila yang harus kita tiru adalah...",
-                options: ["Mementingkan diri sendiri", "Musyawarah dan mengutamakan kepentingan bersama", "Memaksakan kehendak", "Pantang berdiskusi"],
-                answer: 1,
-                explanation: "Para pendiri bangsa selalu mengutamakan musyawarah mufakat serta kepentingan bangsa dan negara."
-            }
-        ];
-
-        function getGridCoordinates(pos) {
-            const index = Math.max(1, Math.min(pos, 100)) - 1;
-            const row = Math.floor(index / 10);
-            let col = index % 10;
-            if (row % 2 === 1) {
-                col = 9 - col;
-            }
-            return { row: 9 - row, col: col };
-        }
-
-        function getTileCenter(pos) {
-            const { row, col } = getGridCoordinates(pos);
-            const x = (col + 0.5) * 10;
-            const y = (row + 0.5) * 10;
-            return { x, y };
-        }
-
-        function renderBoard() {
-            const grid = document.getElementById('boardGrid');
-            if (!grid) return;
-            grid.innerHTML = '';
-
-            for (let row = 0; row < 10; row++) {
-                const actualRow = 9 - row;
-                for (let col = 0; col < 10; col++) {
-                    let actualCol = col;
-                    if (actualRow % 2 === 1) {
-                        actualCol = 9 - col;
-                    }
-                    const tileNum = actualRow * 10 + actualCol + 1;
-                    const isEvenTile = (actualRow + actualCol) % 2 === 0;
-
-                    const tile = document.createElement('div');
-                    tile.className = `relative flex flex-col justify-between p-0.5 sm:p-1 transition-all border border-slate-700/80 ${
-                        isEvenTile ? 'bg-slate-900' : 'bg-slate-800/90'
-                    } ${tileNum === 100 ? 'bg-gradient-to-tr from-amber-600/40 via-yellow-500/30 to-amber-400/40 font-bold border-2 border-amber-400 shadow-inner' : 'hover:bg-slate-700/60'}`;
-
-                    let content = `<span class="text-[9px] sm:text-[10px] md:text-xs font-black ${tileNum === 100 ? 'text-amber-300' : 'text-slate-100'} leading-none bg-slate-950/80 px-1 py-0.5 rounded border border-slate-700/80 w-fit drop-shadow-md">${tileNum}</span>`;
-
-                    if (tileNum === 100) {
-                        content += `<div class="absolute inset-0 flex items-center justify-center text-amber-400 text-lg md:text-2xl opacity-90"><i class="fa-solid fa-trophy drop-shadow-md"></i></div>`;
-                    } else if (tileNum === 1) {
-                        content += `<div class="text-[8px] sm:text-[9px] text-emerald-400 font-extrabold tracking-tighter bg-emerald-950/80 border border-emerald-500/50 px-1 rounded self-start mt-0.5">START</div>`;
-                    } else if (ladders.some(l => l.start === tileNum)) {
-                        content += `<div class="text-[10px] sm:text-xs text-emerald-400 font-bold self-end drop-shadow"><i class="fa-solid fa-stairs"></i></div>`;
-                    } else if (snakes.some(s => s.start === tileNum)) {
-                        content += `<div class="text-[10px] sm:text-xs text-rose-400 font-bold self-end drop-shadow"><i class="fa-solid fa-worm"></i></div>`;
-                    }
-
-                    tile.innerHTML = content;
-                    grid.appendChild(tile);
-                }
-            }
-
-            setTimeout(drawSnakesAndLadders, 100);
-        }
-
-        function drawSnakesAndLadders() {
-            const svg = document.getElementById('svgOverlay');
-            if (!svg) return;
-            svg.innerHTML = '';
-
-            ladders.forEach(ladder => {
-                const startPos = getTileCenter(ladder.start);
-                const endPos = getTileCenter(ladder.end);
-
-                const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line1.setAttribute('x1', `${startPos.x - 1.2}%`);
-                line1.setAttribute('y1', `${startPos.y}%`);
-                line1.setAttribute('x2', `${endPos.x - 1.2}%`);
-                line1.setAttribute('y2', `${endPos.y}%`);
-                line1.setAttribute('stroke', '#10b981');
-                line1.setAttribute('stroke-width', '4');
-                line1.setAttribute('stroke-linecap', 'round');
-
-                const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                line2.setAttribute('x1', `${startPos.x + 1.2}%`);
-                line2.setAttribute('y1', `${startPos.y}%`);
-                line2.setAttribute('x2', `${endPos.x + 1.2}%`);
-                line2.setAttribute('y2', `${endPos.y}%`);
-                line2.setAttribute('stroke', '#10b981');
-                line2.setAttribute('stroke-width', '4');
-                line2.setAttribute('stroke-linecap', 'round');
-
-                svg.appendChild(line1);
-                svg.appendChild(line2);
-
-                const steps = 5;
-                for (let i = 1; i < steps; i++) {
-                    const rung = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                    const rx1 = startPos.x - 1.2 + (endPos.x - startPos.x) * (i / steps);
-                    const ry1 = startPos.y + (endPos.y - startPos.y) * (i / steps);
-                    const rx2 = startPos.x + 1.2 + (endPos.x - startPos.x) * (i / steps);
-                    const ry2 = startPos.y + (endPos.y - startPos.y) * (i / steps);
-
-                    rung.setAttribute('x1', `${rx1}%`);
-                    rung.setAttribute('y1', `${ry1}%`);
-                    rung.setAttribute('x2', `${rx2}%`);
-                    rung.setAttribute('y2', `${ry2}%`);
-                    rung.setAttribute('stroke', '#34d399');
-                    rung.setAttribute('stroke-width', '2.5');
-                    svg.appendChild(rung);
-                }
-            });
-
-            snakes.forEach(snake => {
-                const startPos = getTileCenter(snake.start);
-                const endPos = getTileCenter(snake.end);
-
-                const midX = (startPos.x + endPos.x) / 2 + 8;
-                const midY = (startPos.y + endPos.y) / 2 - 5;
-
-                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                const d = `M ${startPos.x} ${startPos.y} Q ${midX} ${midY} ${endPos.x} ${endPos.y}`;
-
-                path.setAttribute('d', d);
-                path.setAttribute('fill', 'none');
-                path.setAttribute('stroke', '#ef4444');
-                path.setAttribute('stroke-width', '5');
-                path.setAttribute('stroke-linecap', 'round');
-                path.setAttribute('opacity', '0.85');
-
-                const head = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-                head.setAttribute('cx', `${startPos.x}%`);
-                head.setAttribute('cy', `${startPos.y}%`);
-                head.setAttribute('r', '5');
-                head.setAttribute('fill', '#dc2626');
-
-                svg.appendChild(path);
-                svg.appendChild(head);
-            });
-        }
-
-        function updateTokenPositions() {
-            const positionGroups = {};
-            players.forEach((p, idx) => {
-                if (!positionGroups[p.pos]) positionGroups[p.pos] = [];
-                positionGroups[p.pos].push(idx);
-            });
-
-            const offsets = [
-                { dx: 0, dy: 0 },
-                { dx: -2.2, dy: -2.2 },
-                { dx: 2.2, dy: -2.2 },
-                { dx: -2.2, dy: 2.2 },
-                { dx: 2.2, dy: 2.2 }
-            ];
-
-            players.forEach((p, idx) => {
-                const token = document.getElementById(`player${p.id}Token`);
-                if (!token) return;
-
-                if (idx < players.length) {
-                    token.classList.remove('hidden');
-                    const center = getTileCenter(p.pos);
-                    const group = positionGroups[p.pos];
-                    
-                    let offsetX = 0;
-                    let offsetY = 0;
-
-                    if (group.length > 1) {
-                        const spotIdx = group.indexOf(idx) + 1;
-                        offsetX = offsets[spotIdx].dx;
-                        offsetY = offsets[spotIdx].dy;
-                    }
-
-                    token.style.left = `${center.x + offsetX}%`;
-                    token.style.top = `${center.y + offsetY}%`;
-
-                    const cardPosEl = document.getElementById(`p${p.id}PosText`);
-                    if (cardPosEl) cardPosEl.innerText = p.pos;
-                } else {
-                    token.classList.add('hidden');
-                }
-            });
-
-            const activeP = players[currentPlayerIdx];
-            if (activeP) {
-                const turnPosEl = document.getElementById('turnPlayerPos');
-                if (turnPosEl) turnPosEl.innerText = `Petak ${activeP.pos}`;
-            }
-        }
-
-        function selectPlayerCount(count) {
-            selectedPlayerCount = count;
-            for (let i = 2; i <= 4; i++) {
-                const btn = document.getElementById(`btnCount${i}`);
-                if (i === count) {
-                    btn.className = "p-2 rounded-xl border text-xs font-bold bg-amber-500 border-amber-400 text-slate-950 shadow";
-                } else {
-                    btn.className = "p-2 rounded-xl border text-xs font-bold bg-slate-800 border-slate-700 text-slate-300";
-                }
-            }
-            renderPlayerInputs();
-        }
-
-        function renderPlayerInputs() {
-            const container = document.getElementById('playerInputsContainer');
-            if (!container) return;
-            container.innerHTML = '';
-
-            for (let i = 0; i < selectedPlayerCount; i++) {
-                const cfg = PLAYER_CONFIGS[i];
-                const isDefaultBot = (i === 1 && selectedPlayerCount === 2);
+            <!-- Pin Check Box -->
+            <div id="teacher-pin-box" class="text-center py-4">
+                <div class="w-12 h-12 bg-purple-500/20 text-purple-400 font-game text-2xl rounded-2xl mx-auto flex items-center justify-center mb-2 border border-purple-400/30">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h3 class="font-game text-xl text-purple-300 mb-1">Akses Mode Guru</h3>
+                <p class="text-xs text-slate-400 mb-4">Masukkan PIN Pengaman (Default: 1234)</p>
                 
-                const div = document.createElement('div');
-                div.className = "bg-slate-950/60 border border-slate-800 p-2.5 rounded-2xl flex items-center justify-between space-x-2";
-                div.innerHTML = `
-                    <div class="flex items-center space-x-2 flex-1">
-                        <div class="w-6 h-6 rounded-lg ${cfg.bgClass} flex items-center justify-center text-white text-[10px] font-bold shadow flex-shrink-0">
-                            ${i + 1}
+                <input type="password" id="teacher-pin-input" placeholder="Masukkan PIN" class="w-48 text-center bg-slate-900 border border-slate-700 text-white text-lg p-2 rounded-xl mb-3 font-mono outline-none focus:border-purple-400">
+                
+                <div class="flex gap-2 justify-center">
+                    <button id="btn-close-teacher" class="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl font-semibold text-xs">Batal</button>
+                    <button id="btn-verify-pin" class="px-5 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-semibold text-xs shadow">Masuk</button>
+                </div>
+            </div>
+
+            <!-- Teacher Panel Form -->
+            <div id="teacher-panel" class="hidden space-y-3">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-2">
+                    <h3 class="font-game text-lg text-purple-300"><i class="fa-solid fa-pen-to-square mr-1.5"></i> Kelola Soal & Set Tiap Pemain</h3>
+                    <button id="btn-exit-teacher" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <!-- PENGATURAN TINGKAT KELAS PER PEMAIN (P1 - P4) -->
+                <div class="glass-card p-2.5 rounded-xl border border-purple-500/30 space-y-2">
+                    <label class="block text-[10px] font-bold text-amber-300 uppercase tracking-wider">
+                        <i class="fa-solid fa-sliders mr-1"></i> Atur Tingkat Soal Spesifik per Pemain
+                    </label>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                            <span class="text-[9px] text-cyan-400 font-bold block">Pemain 1 (P1)</span>
+                            <select id="teacher-p1-grade" class="w-full bg-slate-900 border border-slate-700 text-white p-1 rounded-lg text-[11px] outline-none">
+                                <option value="1">Kelas 1 SD</option>
+                                <option value="2">Kelas 2 SD</option>
+                                <option value="3">Kelas 3 SD</option>
+                                <option value="4">Kelas 4 SD</option>
+                                <option value="5">Kelas 5 SD</option>
+                                <option value="6">Kelas 6 SD</option>
+                            </select>
                         </div>
-                        <input type="text" id="inputName${i}" value="${isDefaultBot ? 'Garuda Bot' : 'Pemain ' + (i + 1)}" placeholder="Nama Pemain ${i + 1}" class="bg-slate-900 border border-slate-700 text-slate-100 text-xs rounded-xl px-2.5 py-1.5 w-full focus:outline-none focus:border-amber-400 font-semibold" />
+                        <div>
+                            <span class="text-[9px] text-rose-400 font-bold block">Pemain 2 (P2)</span>
+                            <select id="teacher-p2-grade" class="w-full bg-slate-900 border border-slate-700 text-white p-1 rounded-lg text-[11px] outline-none">
+                                <option value="1">Kelas 1 SD</option>
+                                <option value="2">Kelas 2 SD</option>
+                                <option value="3">Kelas 3 SD</option>
+                                <option value="4">Kelas 4 SD</option>
+                                <option value="5">Kelas 5 SD</option>
+                                <option value="6">Kelas 6 SD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-amber-400 font-bold block">Pemain 3 (P3)</span>
+                            <select id="teacher-p3-grade" class="w-full bg-slate-900 border border-slate-700 text-white p-1 rounded-lg text-[11px] outline-none">
+                                <option value="1">Kelas 1 SD</option>
+                                <option value="2">Kelas 2 SD</option>
+                                <option value="3">Kelas 3 SD</option>
+                                <option value="4">Kelas 4 SD</option>
+                                <option value="5">Kelas 5 SD</option>
+                                <option value="6">Kelas 6 SD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <span class="text-[9px] text-emerald-400 font-bold block">Pemain 4 (P4)</span>
+                            <select id="teacher-p4-grade" class="w-full bg-slate-900 border border-slate-700 text-white p-1 rounded-lg text-[11px] outline-none">
+                                <option value="1">Kelas 1 SD</option>
+                                <option value="2">Kelas 2 SD</option>
+                                <option value="3">Kelas 3 SD</option>
+                                <option value="4">Kelas 4 SD</option>
+                                <option value="5">Kelas 5 SD</option>
+                                <option value="6">Kelas 6 SD</option>
+                            </select>
+                        </div>
                     </div>
-                    <button type="button" id="btnToggleBot${i}" onclick="togglePlayerBot(${i})" class="px-2.5 py-1 rounded-xl border text-[10px] font-bold transition flex items-center space-x-1 ${isDefaultBot ? 'bg-blue-950/80 border-blue-500 text-blue-300' : 'bg-slate-800 border-slate-700 text-slate-300'}">
-                        <i id="botIcon${i}" class="${isDefaultBot ? 'fa-solid fa-robot' : 'fa-solid fa-user'}"></i>
-                        <span id="botLabel${i}">${isDefaultBot ? 'BOT' : 'ORANG'}</span>
+                    <button id="btn-save-player-grades" class="w-full py-1.5 bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-game text-xs rounded-lg shadow active:scale-95 transition">
+                        <i class="fa-solid fa-check mr-1"></i> Terapkan Tingkat Soal per Pemain
                     </button>
-                `;
-                container.appendChild(div);
+                </div>
+
+                <div class="space-y-2 text-xs">
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-300 uppercase mb-1">Tingkat Kelas</label>
+                            <select id="new-q-grade" class="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg outline-none focus:border-purple-400">
+                                <option value="1">Kelas 1 SD</option>
+                                <option value="2">Kelas 2 SD</option>
+                                <option value="3">Kelas 3 SD</option>
+                                <option value="4">Kelas 4 SD</option>
+                                <option value="5">Kelas 5 SD</option>
+                                <option value="6">Kelas 6 SD</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-300 uppercase mb-1">Mata Pelajaran</label>
+                            <select id="new-q-subject" class="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg outline-none focus:border-purple-400">
+                                <option value="matematika">Matematika</option>
+                                <option value="ipas">IPAS</option>
+                                <option value="indonesia">Bahasa Indonesia</option>
+                                <option value="pancasila">Pendidikan Pancasila</option>
+                                <option value="seni">Seni Budaya</option>
+                                <option value="pai">PAI & Budi Pekerti</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase mb-1">Pertanyaan / Soal</label>
+                        <textarea id="new-q-text" rows="2" placeholder="Tuliskan pertanyaan di sini..." class="w-full bg-slate-900 border border-slate-700 text-white p-2 rounded-lg outline-none focus:border-purple-400"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[9px] text-slate-400 mb-0.5">Pilihan A</label>
+                            <input type="text" id="new-q-opt0" placeholder="Opsi A" class="w-full bg-slate-900 border border-slate-700 text-white p-1.5 rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] text-slate-400 mb-0.5">Pilihan B</label>
+                            <input type="text" id="new-q-opt1" placeholder="Opsi B" class="w-full bg-slate-900 border border-slate-700 text-white p-1.5 rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] text-slate-400 mb-0.5">Pilihan C</label>
+                            <input type="text" id="new-q-opt2" placeholder="Opsi C" class="w-full bg-slate-900 border border-slate-700 text-white p-1.5 rounded-lg outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] text-slate-400 mb-0.5">Pilihan D</label>
+                            <input type="text" id="new-q-opt3" placeholder="Opsi D" class="w-full bg-slate-900 border border-slate-700 text-white p-1.5 rounded-lg outline-none">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-bold text-slate-300 uppercase mb-1">Kunci Jawaban Benar</label>
+                        <select id="new-q-correct" class="w-full bg-slate-900 border border-slate-700 text-amber-300 p-2 rounded-lg font-bold outline-none">
+                            <option value="0">Jawaban A</option>
+                            <option value="1">Jawaban B</option>
+                            <option value="2">Jawaban C</option>
+                            <option value="3">Jawaban D</option>
+                        </select>
+                    </div>
+
+                    <button id="btn-save-question" class="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-game rounded-xl shadow active:scale-95 transition">
+                        <i class="fa-solid fa-plus mr-1"></i> Simpan Soal Baru
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Sound Effects Script & Logic updates -->
+    <script>
+        /* ==========================================================================
+           2. COMPREHENSIVE QUESTION BANK (KELAS 1-6 & 6 MATA PELAJARAN INC. PAI)
+           ========================================================================== */
+        const QUESTION_BANK = [
+            // ==================== KELAS 1 ====================
+            // Matematika Kelas 1
+            { grade: 1, subject: 'matematika', q: 'Berapakah hasil dari 4 + 5?', options: ['7', '8', '9', '10'], answer: 2 },
+            { grade: 1, subject: 'matematika', q: 'Berapakah hasil dari 10 - 3?', options: ['6', '7', '8', '5'], answer: 1 },
+            { grade: 1, subject: 'matematika', q: 'Urutan bilangan dari yang terkecil: 3, 1, 5, 2 adalah...', options: ['1, 2, 3, 5', '5, 3, 2, 1', '2, 1, 3, 5', '1, 3, 2, 5'], answer: 0 },
+            { grade: 1, subject: 'matematika', q: 'Benda apa yang bentuknya menyerupai bola?', options: ['Buku', 'Kelereng', 'Penggaris', 'Kotak pensil'], answer: 1 },
+            { grade: 1, subject: 'matematika', q: 'Berapakah hasil dari 6 + 2 - 1?', options: ['5', '6', '7', '8'], answer: 2 },
+            { grade: 1, subject: 'matematika', q: 'Lambang bilangan "Tujuh Belas" adalah...', options: ['71', '17', '70', '11'], answer: 1 },
+            { grade: 1, subject: 'matematika', q: 'Bilangan yang ada di antara 14 dan 16 adalah...', options: ['13', '15', '17', '18'], answer: 1 },
+
+            // IPAS Kelas 1
+            { grade: 1, subject: 'ipas', q: 'Bagian tubuh yang digunakan untuk melihat adalah...', options: ['Telinga', 'Mata', 'Hidung', 'Lidah'], answer: 1 },
+            { grade: 1, subject: 'ipas', q: 'Hewan yang bergerak dengan cara melompat adalah...', options: ['Ikan', 'Kelinci', 'Ular', 'Burung'], answer: 1 },
+            { grade: 1, subject: 'ipas', q: 'Makanan sehat empat sehat lima sempurna mencakup...', options: ['Permen', 'Susu & Sayuran', 'Cokelat', 'Es Krim'], answer: 1 },
+            { grade: 1, subject: 'ipas', q: 'Bagian tubuh yang digunakan untuk mendengar bunyi adalah...', options: ['Mata', 'Telinga', 'Tangan', 'Hidung'], answer: 1 },
+            { grade: 1, subject: 'ipas', q: 'Ciri-ciri benda hidup (makhluk hidup) adalah...', options: ['Tidak tumbuh', 'Bernapas dan tumbuh', 'Tidak butuh makan', 'Terbuat dari besi'], answer: 1 },
+
+            // Bahasa Indonesia Kelas 1
+            { grade: 1, subject: 'indonesia', q: 'Huruf vokal dalam kata "BOLA" adalah...', options: ['B dan L', 'O dan A', 'B dan O', 'L dan A'], answer: 1 },
+            { grade: 1, subject: 'indonesia', q: 'Saat diberi bantuan oleh teman, kita mengucapkan...', options: ['Maaf', 'Terima Kasih', 'Permisi', 'Halo'], answer: 1 },
+            { grade: 1, subject: 'indonesia', q: 'Apabila kita melakukan kesalahan, kita sebaiknya mengucapkan...', options: ['Terima kasih', 'Minta maaf', 'Sama-sama', 'Selamat'], answer: 1 },
+            { grade: 1, subject: 'indonesia', q: 'Kata "M A C A N" terdiri dari berapa huruf?', options: ['4 huruf', '5 huruf', '6 huruf', '7 huruf'], answer: 1 },
+
+            // Pancasila Kelas 1
+            { grade: 1, subject: 'pancasila', q: 'Simbol Bintang Emas melambangkan Sila ke-...', options: ['1', '2', '3', '4'], answer: 0 },
+            { grade: 1, subject: 'pancasila', q: 'Dasar negara Indonesia adalah...', options: ['UUD 1945', 'Pancasila', 'Bendera Merah Putih', 'Garuda'], answer: 1 },
+            { grade: 1, subject: 'pancasila', q: 'Warna bendera negara Indonesia adalah...', options: ['Merah dan Putih', 'Hijau dan Putih', 'Merah dan Kuning', 'Biru dan Putih'], answer: 0 },
+            { grade: 1, subject: 'pancasila', q: 'Sila pertama Pancasila berbunyi...', options: ['Ketuhanan Yang Maha Esa', 'Persatuan Indonesia', 'Keadilan sosial', 'Kemanusiaan yang adil'], answer: 0 },
+
+            // Seni Budaya Kelas 1
+            { grade: 1, subject: 'seni', q: 'Warna hasil campuran merah dan kuning adalah...', options: ['Hijau', 'Jingga/Oranye', 'Ungu', 'Cokelat'], answer: 1 },
+            { grade: 1, subject: 'seni', q: 'Suara kucing berbunyi...', options: ['Guk guk', 'Mbeee', 'Meong', 'Kukuruyuk'], answer: 2 },
+            { grade: 1, subject: 'seni', q: 'Gambar yang dibuat dengan goresan pensil warna atau krayon disebut seni...', options: ['Musik', 'Rupa/Lukis', 'Tari', 'Teater'], answer: 1 },
+
+            // PAI Kelas 1
+            { grade: 1, subject: 'pai', q: 'Rukun Islam yang pertama adalah...', options: ['Shalat', 'Mengucapkan Dua Kalimat Syahadat', 'Puasa', 'Zakat'], answer: 1 },
+            { grade: 1, subject: 'pai', q: 'Kitab suci umat Islam adalah...', options: ['Taurat', 'Injil', 'Al-Qur\'an', 'Zabur'], answer: 2 },
+            { grade: 1, subject: 'pai', q: 'Sebelum makan kita hendaknya...', options: ['Tidur', 'Berdoa', 'Bermain', 'Mandi'], answer: 1 },
+            { grade: 1, subject: 'pai', q: 'Tuhan pencipta alam semesta adalah...', options: ['Malaikat', 'Nabi', 'Allah Swt.', 'Manusia'], answer: 2 },
+            { grade: 1, subject: 'pai', q: 'Agama yang dianut oleh umat muslim adalah...', options: ['Kristen', 'Islam', 'Hindu', 'Buddha'], answer: 1 },
+
+
+            // ==================== KELAS 2 ====================
+            // Matematika Kelas 2
+            { grade: 2, subject: 'matematika', q: 'Berapakah 5 x 3?', options: ['12', '15', '18', '20'], answer: 1 },
+            { grade: 2, subject: 'matematika', q: 'Bangun datar yang memiliki 3 sisi adalah...', options: ['Persegi', 'Segitiga', 'Lingkaran', 'Trapesium'], answer: 1 },
+            { grade: 2, subject: 'matematika', q: 'Berapakah 20 dibagi 4?', options: ['4', '5', '6', '10'], answer: 1 },
+            { grade: 2, subject: 'matematika', q: 'Nilai tempat angka 7 pada bilangan 375 adalah...', options: ['Ratusan', 'Puluhan', 'Satuan', 'Ribuan'], answer: 1 },
+            { grade: 2, subject: 'matematika', q: '45 + 38 = ...', options: ['73', '83', '85', '93'], answer: 1 },
+            { grade: 2, subject: 'matematika', q: 'Bangun datar persegi memiliki berapa sisi yang sama panjang?', options: ['2', '3', '4', '5'], answer: 2 },
+
+            // IPAS Kelas 2
+            { grade: 2, subject: 'ipas', q: 'Wujud benda air jika dimasukkan ke dalam freezer menjadi...', options: ['Gas', 'Padat', 'Uap', 'Cair'], answer: 1 },
+            { grade: 2, subject: 'ipas', q: 'Matahari terbit di sebelah...', options: ['Barat', 'Timur', 'Utara', 'Selatan'], answer: 1 },
+            { grade: 2, subject: 'ipas', q: 'Tumbuhan membutuhkan ... untuk hidup dan tumbuh.', options: ['Minyak', 'Batu', 'Air dan Sinar Matahari', 'Plastik'], answer: 2 },
+            { grade: 2, subject: 'ipas', q: 'Hewan pemakan daging saja dinamakan...', options: ['Herbivora', 'Karnivora', 'Omnivora', 'Insektivora'], answer: 1 },
+
+            // Bahasa Indonesia Kelas 2
+            { grade: 2, subject: 'indonesia', q: 'Lawan kata dari "Rajin" adalah...', options: ['Pintar', 'Malas', 'Pandai', 'Cepat'], answer: 1 },
+            { grade: 2, subject: 'indonesia', q: 'Tanda baca di akhir kalimat berita adalah...', options: ['Tanda Tanya (?)', 'Tanda Seru (!)', 'Tanda Titik (.)', 'Tanda Koma (,)'], answer: 2 },
+            { grade: 2, subject: 'indonesia', q: 'Kalimat yang memuat ucapan permohonan tolong ditandai dengan kata...', options: ['Bolehkah', 'Tolong', 'Ayo', 'Jangan'], answer: 1 },
+
+            // Pancasila Kelas 2
+            { grade: 2, subject: 'pancasila', q: 'Sila kedua Pancasila berbunyi...', options: ['Ketuhanan Yang Maha Esa', 'Kemanusiaan yang adil dan beradab', 'Persatuan Indonesia', 'Keadilan sosial'], answer: 1 },
+            { grade: 2, subject: 'pancasila', q: 'Rantai Emas adalah simbol Pancasila sila ke-...', options: ['1', '2', '3', '4'], answer: 1 },
+            { grade: 2, subject: 'pancasila', q: 'Sikap gotong royong di lingkungan sekolah adalah contoh pengamalan sila ke-...', options: ['1', '2', '3', '5'], answer: 2 },
+
+            // Seni Budaya Kelas 2
+            { grade: 2, subject: 'seni', q: 'Alat musik yang dimainkan dengan cara dipukul adalah...', options: ['Gitar', 'Suling', 'Drum/Gendang', 'Biola'], answer: 2 },
+            { grade: 2, subject: 'seni', q: 'Lagu "Indonesia Raya" diciptakan oleh...', options: ['Ibu Sud', 'W.R. Soepratman', 'Pak Dal', 'Kusbini'], answer: 1 },
+
+            // PAI Kelas 2
+            { grade: 2, subject: 'pai', q: 'Nabi dan Rasul pertama yang diciptakan Allah Swt. adalah...', options: ['Nabi Muhammad Saw.', 'Nabi Ibrahim a.s.', 'Nabi Adam a.s.', 'Nabi Musa a.s.'], answer: 2 },
+            { grade: 2, subject: 'pai', q: 'Jumlah shalat fardhu dalam sehari semalam adalah...', options: ['3 waktu', '4 waktu', '5 waktu', '6 waktu'], answer: 2 },
+            { grade: 2, subject: 'pai', q: 'Sifat jujur artinya perkataan kita harus...', options: ['Sesuai dengan kenyataan', 'Boleh bohong', 'Karangan', 'Palsu'], answer: 0 },
+            { grade: 2, subject: 'pai', q: 'Shalat Subuh berjumlah berapa rakaat?', options: ['2 Rakaat', '3 Rakaat', '4 Rakaat', '1 Rakaat'], answer: 0 },
+
+
+            // ==================== KELAS 3 ====================
+            // Matematika Kelas 3
+            { grade: 3, subject: 'matematika', q: 'Hasil dari 120 + 250 adalah...', options: ['350', '370', '380', '390'], answer: 1 },
+            { grade: 3, subject: 'matematika', q: 'Pecahan sederhana dari separuh bagian adalah...', options: ['1/2', '1/3', '1/4', '2/3'], answer: 0 },
+            { grade: 3, subject: 'matematika', q: '4 x 8 - 10 = ...', options: ['20', '22', '24', '26'], answer: 1 },
+            { grade: 3, subject: 'matematika', q: 'Berapakah keliling persegi panjang dengan panjang 6 cm dan lebar 4 cm?', options: ['20 cm', '24 cm', '10 cm', '12 cm'], answer: 0 },
+            { grade: 3, subject: 'matematika', q: '1 jam terdiri dari berapa menit?', options: ['30 menit', '60 menit', '90 menit', '100 menit'], answer: 1 },
+
+            // IPAS Kelas 3
+            { grade: 3, subject: 'ipas', q: 'Proses pembuatan makanan pada tumbuhan hijau disebut...', options: ['Respirasi', 'Fotosintesis', 'Pencernaan', 'Evaporasi'], answer: 1 },
+            { grade: 3, subject: 'ipas', q: 'Hewan yang memakan tumbuhan saja disebut...', options: ['Karnivora', 'Herbivora', 'Omnivora', 'Insectivora'], answer: 1 },
+            { grade: 3, subject: 'ipas', q: 'Berikut ini adalah zat cair, KECUALI...', options: ['Minyak goreng', 'Kecap', 'Batu es', 'Air sumur'], answer: 2 },
+
+            // Bahasa Indonesia Kelas 3
+            { grade: 3, subject: 'indonesia', q: 'Kata tanya untuk menanyakan tempat adalah...', options: ['Kapan', 'Siapa', 'Di mana', 'Mengapa'], answer: 2 },
+            { grade: 3, subject: 'indonesia', q: 'Gagasan utama sebuah paragraf dapat ditemukan pada...', options: ['Kalimat utama', 'Kalimat penjelas', 'Gambar', 'Judul sajak'], answer: 0 },
+
+            // Pancasila Kelas 3
+            { grade: 3, subject: 'pancasila', q: 'Pohon Beringin adalah lambang Pancasila sila ke-...', options: ['2', '3', '4', '5'], answer: 1 },
+            { grade: 3, subject: 'pancasila', q: 'Keputusan yang diambil berdasarkan kesepakatan bersama dalam musyawarah disebut...', options: ['Sanksi', 'Mufakat', 'Hukuman', 'Protes'], answer: 1 },
+
+            // Seni Budaya Kelas 3
+            { grade: 3, subject: 'seni', q: 'Tari Kecak berasal dari daerah...', options: ['Jawa Barat', 'Bali', 'Sumatra Utara', 'Papua'], answer: 1 },
+            { grade: 3, subject: 'seni', q: 'Benda kerajinan berbahan dasar tanah liat dinamakan...', options: ['Ukiran kayu', 'Gerabah/Keramik', 'Anyaman bambu', 'Logam'], answer: 1 },
+
+            // PAI Kelas 3
+            { grade: 3, subject: 'pai', q: 'Jumlah Malaikat Allah yang wajib diketahui ada...', options: ['5', '10', '25', '99'], answer: 1 },
+            { grade: 3, subject: 'pai', q: 'Malaikat yang bertugas menyampaikan wahyu adalah...', options: ['Malaikat Jibril', 'Malaikat Mikail', 'Malaikat Israfil', 'Malaikat Izrail'], answer: 0 },
+            { grade: 3, subject: 'pai', q: 'Surah Al-Fatihah terdiri dari ... ayat.', options: ['5', '6', '7', '8'], answer: 2 },
+            { grade: 3, subject: 'pai', q: 'Nabi yang diberi mukjizat dapat membuat kapal besar di atas gunung adalah...', options: ['Nabi Nuh a.s.', 'Nabi Ibrahim a.s.', 'Nabi Musa a.s.', 'Nabi Yunus a.s.'], answer: 0 },
+
+
+            // ==================== KELAS 4 ====================
+            // Matematika Kelas 4
+            { grade: 4, subject: 'matematika', q: 'KPK dari 4 dan 6 adalah...', options: ['12', '24', '8', '16'], answer: 0 },
+            { grade: 4, subject: 'matematika', q: 'Keliling persegi dengan panjang sisi 8 cm adalah...', options: ['16 cm', '32 cm', '64 cm', '24 cm'], answer: 1 },
+            { grade: 4, subject: 'matematika', q: 'Sudut siku-siku besarnya adalah...', options: ['45°', '90°', '180°', '360°'], answer: 1 },
+            { grade: 4, subject: 'matematika', q: 'FPB dari 12 dan 18 adalah...', options: ['2', '3', '6', '12'], answer: 2 },
+            { grade: 4, subject: 'matematika', q: 'Pecahan 3/4 jika diubah ke bentuk persen menjadi...', options: ['25%', '50%', '75%', '100%'], answer: 2 },
+
+            // IPAS Kelas 4
+            { grade: 4, subject: 'ipas', q: 'Gaya yang terjadi saat magnet menarik paku adalah...', options: ['Gaya Gesek', 'Gaya Magnet', 'Gaya Gravitasi', 'Gaya Pegas'], answer: 1 },
+            { grade: 4, subject: 'ipas', q: 'Perubahan wujud padat menjadi gas disebut...', options: ['Mencair', 'Menyublim', 'Mengembun', 'Membeku'], answer: 1 },
+            { grade: 4, subject: 'ipas', q: 'Akar tumbuhan berfungsi untuk...', options: ['Tempat fotosintesis', 'Menyerap air dan zat hara', 'Menarik serangga', 'Menghasilkan biji'], answer: 1 },
+            { grade: 4, subject: 'ipas', q: 'Rantai makanan dimulai dari makhluk hidup berperan sebagai...', options: ['Konsumen I', 'Pengurai', 'Produsen', 'Karnivora'], answer: 2 },
+
+            // Bahasa Indonesia Kelas 4
+            { grade: 4, subject: 'indonesia', q: 'Gagasan utama dalam sebuah paragraf disebut...', options: ['Ide Pokok', 'Kalimat Penjelas', 'Kesimpulan', 'Pikiran Sekunder'], answer: 0 },
+            { grade: 4, subject: 'indonesia', q: 'Kata hubung "tetapi" digunakan untuk menyatakan kalimat yang...', options: ['Setara', 'Berlawanan', 'Sebab-akibat', 'Tujuan'], answer: 1 },
+
+            // Pancasila Kelas 4
+            { grade: 4, subject: 'pancasila', q: 'Semboyan negara Indonesia adalah...', options: ['Tut Wuri Handayani', 'Bhinneka Tunggal Ika', 'Bersatu Kita Teguh', 'Pancasila Sakti'], answer: 1 },
+            { grade: 4, subject: 'pancasila', q: 'Kepala Banteng melambangkan Sila ke-...', options: ['2', '3', '4', '5'], answer: 2 },
+
+            // Seni Budaya Kelas 4
+            { grade: 4, subject: 'seni', q: 'Lagu daerah "Anju Ahu" berasal dari...', options: ['Sumatra Utara', 'Jawa Tengah', 'Kalimantan', 'Sulawesi'], answer: 0 },
+            { grade: 4, subject: 'seni', q: 'Alat musik Angklung dimainkan dengan cara...', options: ['Ditiup', 'Digoyang', 'Dipetik', 'Dipukul'], answer: 1 },
+
+            // PAI Kelas 4
+            { grade: 4, subject: 'pai', q: 'Asmaul Husna memiliki arti...', options: ['Nama-nama Allah Swt. yang baik dan indah', 'Kumpulan doa nabi', 'Kitab suci', 'Mukjizat rasul'], answer: 0 },
+            { grade: 4, subject: 'pai', q: 'Jumlah Asmaul Husna yang dimiliki Allah Swt. adalah...', options: ['25', '66', '99', '100'], answer: 2 },
+            { grade: 4, subject: 'pai', q: 'Nabi terakhir yang menjadi penutup para nabi adalah...', options: ['Nabi Isa a.s.', 'Nabi Musa a.s.', 'Nabi Ibrahim a.s.', 'Nabi Muhammad Saw.'], answer: 3 },
+            { grade: 4, subject: 'pai', q: 'Kitab suci Injil diturunkan kepada Nabi...', options: ['Nabi Daud a.s.', 'Nabi Musa a.s.', 'Nabi Isa a.s.', 'Nabi Muhammad Saw.'], answer: 2 },
+
+
+            // ==================== KELAS 5 ====================
+            // Matematika Kelas 5
+            { grade: 5, subject: 'matematika', q: 'Hasil dari 3/4 + 1/2 adalah...', options: ['4/6', '5/4 atau 1 1/4', '1', '2/4'], answer: 1 },
+            { grade: 5, subject: 'matematika', q: 'Volume kubus dengan panjang rusuk 5 cm adalah...', options: ['25 cm³', '100 cm³', '125 cm³', '150 cm³'], answer: 2 },
+            { grade: 5, subject: 'matematika', q: 'Hasil dari 15² adalah...', options: ['150', '200', '225', '250'], answer: 2 },
+            { grade: 5, subject: 'matematika', q: 'Skala peta 1 : 100.000 artinya 1 cm pada peta mewakili jarak sebenarnya...', options: ['100 meter', '1 km', '10 km', '100 km'], answer: 1 },
+            { grade: 5, subject: 'matematika', q: 'Sebuah kubus memiliki berapa sisi berbentuk persegi?', options: ['4 sisi', '6 sisi', '8 sisi', '12 sisi'], answer: 1 },
+
+            // IPAS Kelas 5
+            { grade: 5, subject: 'ipas', q: 'Organ pernapasan utama pada manusia adalah...', options: ['Jantung', 'Hati', 'Paru-paru', 'Lambung'], answer: 2 },
+            { grade: 5, subject: 'ipas', q: 'Komponen biotik dalam ekosistem contohnya adalah...', options: ['Air', 'Tanah', 'Tumbuhan', 'Batu'], answer: 2 },
+            { grade: 5, subject: 'ipas', q: 'Pembuluh darah yang mengalirkan darah keluar dari jantung disebut...', options: ['Vena', 'Kapiler', 'Arteri/Nadi', 'Aorta'], answer: 2 },
+            { grade: 5, subject: 'ipas', q: 'Sendi yang memungkinkan gerakan ke segala arah adalah...', options: ['Sendi Engsel', 'Sendi Peluru', 'Sendi Putar', 'Sendi Geser'], answer: 1 },
+
+            // Bahasa Indonesia Kelas 5
+            { grade: 5, subject: 'indonesia', q: 'Cerita rakyat yang tokohnya diperankan oleh hewan disebut...', options: ['Mitos', 'Fabel', 'Legenda', 'Epos'], answer: 1 },
+            { grade: 5, subject: 'indonesia', q: 'Singkatan dari kata "dan lain-lain" yang baku adalah...', options: ['d.l.l.', 'dll.', 'd/l', 'DLL'], answer: 1 },
+
+            // Pancasila Kelas 5
+            { grade: 5, subject: 'pancasila', q: 'Keputusan bersama yang diambil dengan pemungutan suara terbanyak disebut...', options: ['Musyawarah', 'Voting', 'Aklamasi', 'Mufakat'], answer: 1 },
+            { grade: 5, subject: 'pancasila', q: 'Padi dan Kapas adalah lambang sila ke-...', options: ['2', '3', '4', '5'], answer: 3 },
+
+            // Seni Budaya Kelas 5
+            { grade: 5, subject: 'seni', q: 'Seni membuat patung merupakan karya seni...', options: ['1 Dimensi', '2 Dimensi', '3 Dimensi', 'Tanpa Dimensi'], answer: 2 },
+            { grade: 5, subject: 'seni', q: 'Tangga nada diatonis mayor memiliki sifat lagu yang...', options: ['Sedih dan lambat', 'Riang gembira dan bersemangat', 'Mencekam', 'Syahdu'], answer: 1 },
+
+            // PAI Kelas 5
+            { grade: 5, subject: 'pai', q: 'Puasa wajib pada bulan Ramadhan hukumnya bagi umat Islam adalah...', options: ['Sunnah', 'Fardhu \'Ain / Wajib', 'Makruh', 'Mubah'], answer: 1 },
+            { grade: 5, subject: 'pai', q: 'Peristiwa turunnya Al-Qur\'an pertama kali dinamakan...', options: ['Isra Miraj', 'Nuzulul Qur\'an', 'Maulid Nabi', 'Hijrah'], answer: 1 },
+            { grade: 5, subject: 'pai', q: 'Malaikat pencatat amal buruk/kejahatan manusia adalah...', options: ['Malaikat Raqib', 'Malaikat Atid', 'Malaikat Munkar', 'Malaikat Nakir'], answer: 1 },
+            { grade: 5, subject: 'pai', q: 'Gelar "Khalilullah" (kekasih Allah) diberikan kepada Nabi...', options: ['Nabi Muhammad Saw.', 'Nabi Ibrahim a.s.', 'Nabi Isa a.s.', 'Nabi Musa a.s.'], answer: 1 },
+
+
+            // ==================== KELAS 6 ====================
+            // Matematika Kelas 6
+            { grade: 6, subject: 'matematika', q: 'Berapakah (-12) + 8?', options: ['-4', '4', '-20', '20'], answer: 0 },
+            { grade: 6, subject: 'matematika', q: 'Rumus luas lingkaran adalah...', options: ['π x r', '2 x π x r', 'π x r²', 'π x d'], answer: 2 },
+            { grade: 6, subject: 'matematika', q: 'Hasil dari 25 x (-4) - 10 adalah...', options: ['-90', '-110', '90', '110'], answer: 1 },
+            { grade: 6, subject: 'matematika', q: 'Rata-rata (mean) dari data 6, 7, 8, 9, 10 adalah...', options: ['7', '8', '8.5', '9'], answer: 1 },
+            { grade: 6, subject: 'matematika', q: 'Volume tabung dengan jari-jari r dan tinggi t adalah...', options: ['π x r² x t', '1/3 x π x r² x t', '2 x π x r x t', 'π x r x t²'], answer: 0 },
+            { grade: 6, subject: 'matematika', q: 'Nilai modus dari data 5, 6, 7, 6, 8, 6, 9 adalah...', options: ['5', '6', '7', '8'], answer: 1 },
+            { grade: 6, subject: 'matematika', q: 'Hasil akar pangkat tiga dari 1.000 (³√1000) adalah...', options: ['10', '20', '100', '5'], answer: 0 },
+
+            // IPAS Kelas 6
+            { grade: 6, subject: 'ipas', q: 'Planet terbesar dalam sistem Tata Surya kita adalah...', options: ['Mars', 'Saturnus', 'Yupiter', 'Neptunus'], answer: 2 },
+            { grade: 6, subject: 'ipas', q: 'Tumbuhan paku dan jamur berkembang biak menggunakan...', options: ['Biji', 'Tunas', 'Spora', 'Stek'], answer: 2 },
+            { grade: 6, subject: 'ipas', q: 'Gerhana matahari terjadi saat posisi bulan berada di antara...', options: ['Bumi dan Mars', 'Bumi dan Matahari', 'Matahari dan Yupiter', 'Bumi dan Bintang'], answer: 1 },
+            { grade: 6, subject: 'ipas', q: 'Perkembangbiakan secara bertelur dan melahirkan dinamakan...', options: ['Ovipar', 'Vivipar', 'Ovovivipar', 'Fragmentasi'], answer: 2 },
+            { grade: 6, subject: 'ipas', q: 'Rotasi bumi menyebabkan terjadinya...', options: ['Pergantian musim', 'Siang dan malam', 'Gerhana bulan', 'Pasang surut air laut'], answer: 1 },
+
+            // Bahasa Indonesia Kelas 6
+            { grade: 6, subject: 'indonesia', q: 'Teks yang berisi petunjuk cara membuat atau melakukan sesuatu adalah...', options: ['Teks Narasi', 'Teks Prosedur', 'Teks Deskripsi', 'Teks Eksplanasi'], answer: 1 },
+            { grade: 6, subject: 'indonesia', q: 'Pikiran utama dalam sebuah wacana yang dijelaskan oleh kalimat penjelas dinamakan...', options: ['Gagasan Utama/Ide Pokok', 'Tema', 'Ringkasan', 'Latar'], answer: 0 },
+            { grade: 6, subject: 'indonesia', q: 'Lawan kata atau antonim dari kata "Canggih" adalah...', options: ['Modern', 'Tradisional / Sederhana', 'Mewah', 'Rumit'], answer: 1 },
+
+            // Pancasila Kelas 6
+            { grade: 6, subject: 'pancasila', q: 'Lembaga negara yang berwenang membuat Undang-Undang adalah...', options: ['Presiden', 'DPR', 'MA', 'BPK'], answer: 1 },
+            { grade: 6, subject: 'pancasila', q: 'Nilai Juang Rumusan Pancasila yang harus diteladani adalah...', options: ['Mementingkan golongan', 'Cinta tanah air dan rela berkorban', 'Meminta imbalan', 'Acuh tak acuh'], answer: 1 },
+            { grade: 6, subject: 'pancasila', q: 'Masa jabatan Presiden Indonesia dalam satu periode adalah...', options: ['4 tahun', '5 tahun', '6 tahun', '10 tahun'], answer: 1 },
+
+            // Seni Budaya Kelas 6
+            { grade: 6, subject: 'seni', q: 'Batik yang dibuat dengan teknik cetak modern disebut batik...', options: ['Tulis', 'Cap', 'Printing', 'Ikat'], answer: 2 },
+            { grade: 6, subject: 'seni', q: 'Interval nada dari do ke mi berjarak...', options: ['1 nada', '1 1/2 nada', '2 nada', '3 nada'], answer: 2 },
+
+            // PAI Kelas 6
+            { grade: 6, subject: 'pai', q: 'Rukun Iman yang keenam adalah percaya kepada...', options: ['Hari Kiamat', 'Malaikat', 'Qada dan Qadar', 'Kitab-kitab Allah'], answer: 2 },
+            { grade: 6, subject: 'pai', q: 'Gelar "Al-Amin" yang diberikan masyarakat Quraisy kepada Nabi Muhammad Saw. artinya...', options: ['Yang Bijaksana', 'Yang Dapat Dipercaya', 'Yang Cerdas', 'Yang Pemurah'], answer: 1 },
+            { grade: 6, subject: 'pai', q: 'Hari dibangkitkannya seluruh manusia dari alam kubur dinamakan...', options: ['Yaumul Ba\'ats', 'Yaumul Hisab', 'Yaumul Mizan', 'Yaumul Mahsyar'], answer: 0 },
+            { grade: 6, subject: 'pai', q: 'Sahabat Nabi Muhammad Saw. yang mendapat julukan "Al-Faruq" adalah...', options: ['Abu Bakar Ash-Shiddiq r.a.', 'Umar bin Khattab r.a.', 'Utsman bin Affan r.a.', 'Ali bin Abi Thalib r.a.'], answer: 1 },
+            { grade: 6, subject: 'pai', q: 'Sikap toleransi dan menghargai perbedaan antarumat beragama disebut...', options: ['Tasamuh', 'Tawakal', 'Tawaqqu', 'Qana\'ah'], answer: 0 }
+        ];
+
+        /* Pelacak Soal yang Sudah Dipergunakan (Pencegah Pengulangan) */
+        const usedQuestionIndexes = new Set();
+
+        /* ==========================================================================
+           1. GAME STATE & 3D GLOBAL VARIABLES
+           ========================================================================== */
+        const gameState = {
+            playerCount: 2,
+            currentPlayer: 1,
+            positions: { 1: 1, 2: 1, 3: 1, 4: 1 },
+            scores: { 1: 0, 2: 0, 3: 0, 4: 0 },
+            playerNames: { 1: 'Pemain 1', 2: 'Pemain 2', 3: 'Pemain 3', 4: 'Pemain 4' },
+            playerGrades: { 1: 1, 2: 1, 3: 1, 4: 1 },
+            grade: 1,
+            subject: 'all',
+            isRolling: false,
+            isMoving: false,
+            currentQuestion: null,
+            snakes: { 16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78 },
+            ladders: { 2: 38, 7: 14, 8: 31, 15: 26, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 78: 98 },
+            colors: {
+                1: { primary: 0x06b6d4, class: 'text-cyan-400' },
+                2: { primary: 0xf43f5e, class: 'text-rose-400' },
+                3: { primary: 0xf59e0b, class: 'text-amber-400' },
+                4: { primary: 0x10b981, class: 'text-emerald-400' }
             }
-        }
+        };
 
-        function togglePlayerBot(idx) {
-            const label = document.getElementById(`botLabel${idx}`);
-            const icon = document.getElementById(`botIcon${idx}`);
-            const btn = document.getElementById(`btnToggleBot${idx}`);
-            const input = document.getElementById(`inputName${idx}`);
-
-            if (label.innerText === 'ORANG') {
-                label.innerText = 'BOT';
-                icon.className = 'fa-solid fa-robot';
-                btn.className = 'px-2.5 py-1 rounded-xl border text-[10px] font-bold transition flex items-center space-x-1 bg-blue-950/80 border-blue-500 text-blue-300';
-                if (input.value.startsWith('Pemain')) input.value = `Bot ${PLAYER_CONFIGS[idx].color.toUpperCase()}`;
-            } else {
-                label.innerText = 'ORANG';
-                icon.className = 'fa-solid fa-user';
-                btn.className = 'px-2.5 py-1 rounded-xl border text-[10px] font-bold transition flex items-center space-x-1 bg-slate-800 border-slate-700 text-slate-300';
-                if (input.value.startsWith('Bot')) input.value = `Pemain ${idx + 1}`;
+        // Web Audio Synthesizer (Sound & Mario BGM)
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.bgmTimer = null;
+                this.isMuted = false;
             }
-        }
-
-        function setPresetMode(mode) {
-            if (mode === 'vsBot') {
-                selectPlayerCount(2);
-                document.getElementById('inputName0').value = "Pemain 1";
-                document.getElementById('inputName1').value = "Garuda Bot";
-            } else if (mode === 'allHumans') {
-                for (let i = 0; i < selectedPlayerCount; i++) {
-                    const label = document.getElementById(`botLabel${i}`);
-                    if (label && label.innerText === 'BOT') togglePlayerBot(i);
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
                 }
-            } else if (mode === 'allBots') {
-                for (let i = 0; i < selectedPlayerCount; i++) {
-                    const label = document.getElementById(`botLabel${i}`);
-                    if (label && label.innerText === 'ORANG') togglePlayerBot(i);
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
                 }
             }
-        }
-
-        function startGameFromConfig() {
-            players = [];
-            for (let i = 0; i < selectedPlayerCount; i++) {
-                const nameInput = document.getElementById(`inputName${i}`).value.trim();
-                const isBot = document.getElementById(`botLabel${i}`).innerText === 'BOT';
-                const cfg = PLAYER_CONFIGS[i];
-
-                players.push({
-                    id: cfg.id,
-                    name: nameInput || cfg.defaultName,
-                    isBot: isBot,
-                    pos: 1,
-                    score: 0,
-                    config: cfg
+            playTone(freq, duration, type = 'sine', gainVal = 0.1) {
+                if (this.isMuted || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            }
+            playCorrect() {
+                this.playTone(523.25, 0.1, 'triangle', 0.2);
+                setTimeout(() => this.playTone(659.25, 0.1, 'triangle', 0.2), 100);
+                setTimeout(() => this.playTone(783.99, 0.25, 'triangle', 0.2), 200);
+            }
+            playWrong() {
+                this.playTone(300, 0.15, 'sawtooth', 0.2);
+                setTimeout(() => this.playTone(220, 0.3, 'sawtooth', 0.2), 150);
+            }
+            playDiceRoll() {
+                for (let i = 0; i < 6; i++) {
+                    setTimeout(() => this.playTone(200 + Math.random() * 300, 0.05, 'square', 0.05), i * 60);
+                }
+            }
+            playLadder() {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => this.playTone(400 + i * 100, 0.08, 'sine', 0.15), i * 70);
+                }
+            }
+            playSnake() {
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => this.playTone(600 - i * 90, 0.08, 'sawtooth', 0.15), i * 70);
+                }
+            }
+            playWin() {
+                const notes = [523.25, 659.25, 783.99, 1046.50];
+                notes.forEach((n, idx) => {
+                    setTimeout(() => this.playTone(n, 0.25, 'triangle', 0.25), idx * 120);
                 });
             }
+            playMarioBGM() {
+                if (this.bgmTimer) clearInterval(this.bgmTimer);
+                const notes = [
+                    659, 659, 0, 659, 0, 523, 659, 0,
+                    784, 0, 0, 0, 392, 0, 0, 0,
+                    523, 0, 0, 392, 0, 0, 330, 0,
+                    0, 440, 0, 493, 0, 466, 440, 0
+                ];
+                let noteIdx = 0;
+                this.bgmTimer = setInterval(() => {
+                    if (this.isMuted) return;
+                    const freq = notes[noteIdx];
+                    if (freq > 0) {
+                        this.playTone(freq, 0.12, 'square', 0.03);
+                    }
+                    noteIdx = (noteIdx + 1) % notes.length;
+                }, 180);
+            }
+            toggleMarioBGM() {
+                this.isMuted = !this.isMuted;
+                return !this.isMuted;
+            }
+        }
+        const sound = new SoundEngine();
 
-            initAudio();
-            currentPlayerIdx = 0;
+        // Three.js Scene Variables
+        let scene, camera, renderer, controls;
+        let boardGroup, diceMesh;
+        const playerMeshes = {};
+        const squarePositions = {};
 
-            document.getElementById('startModal').classList.add('hidden');
+        /* ==========================================================================
+           3D SCENE INITIALIZATION & CREATION
+           ========================================================================== */
+        function init3D() {
+            const container = document.getElementById('canvas-container');
             
-            for (let i = 1; i <= 4; i++) {
-                const tok = document.getElementById(`player${i}Token`);
-                if (i <= selectedPlayerCount) tok.classList.remove('hidden');
-                else tok.classList.add('hidden');
-            }
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
 
-            renderPlayerCards();
-            renderBoard();
-            updateScoresUI();
-            updateTokenPositions();
-            updateTurnUI();
+            // Camera
+            const isMobile = window.innerWidth < 640;
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, isMobile ? 28 : 20, isMobile ? 28 : 22);
 
-            const badge = document.getElementById('gameModeBadge');
-            if (badge) badge.innerText = `${players.length} Pemain (${players.filter(p=>!p.isBot).length} Manusia, ${players.filter(p=>p.isBot).length} Bot)`;
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
 
-            const logContainer = document.getElementById('gameLog');
-            if (logContainer) {
-                logContainer.innerHTML = '<p class="text-[11px] text-slate-400 italic">Selamat datang! Siapkan diri mempelajari sejarah kelahiran Pancasila.</p>';
-            }
-            logMessage('<b>Permainan Dimulai!</b> Lempar dadu untuk mendarat di petak dan jawab pertanyaan.');
+            // Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2.1;
+            controls.minDistance = 10;
+            controls.maxDistance = 50;
 
-            checkBotTurnTrigger();
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            scene.add(ambientLight);
+
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(15, 30, 15);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 80;
+            const d = 15;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            // Build Game World
+            createBoard3D();
+            createLadders3D();
+            createSnakes3D();
+            createPlayers3D();
+            createDice3D();
+
+            // Resize Event
+            window.addEventListener('resize', onWindowResize);
+
+            // Start Animation Loop
+            animate();
         }
 
-        function renderPlayerCards() {
-            const container = document.getElementById('playerCardsContainer');
-            if (!container) return;
-            container.innerHTML = '';
+        function createBoard3D() {
+            boardGroup = new THREE.Group();
+            scene.add(boardGroup);
 
-            players.forEach((p) => {
-                const card = document.createElement('div');
-                card.id = `p${p.id}Card`;
-                card.className = `bg-slate-900/90 border-2 ${p.id === 1 ? p.config.borderClass : 'border-transparent'} p-2 rounded-2xl shadow-lg flex items-center justify-between transition-all`;
-                card.innerHTML = `
-                    <div class="flex items-center space-x-1.5 overflow-hidden">
-                        <div class="w-7 h-7 rounded-xl ${p.config.bgClass} flex items-center justify-center text-white text-[10px] font-bold shadow flex-shrink-0">
-                            <i class="${p.isBot ? 'fa-solid fa-robot' : 'fa-solid fa-user'}"></i>
-                        </div>
-                        <div class="truncate">
-                            <div class="text-[9px] text-slate-400 font-medium leading-none truncate">${p.config.color.toUpperCase()}</div>
-                            <div class="text-xs font-bold text-slate-200 truncate">${p.name}</div>
-                        </div>
-                    </div>
-                    <div class="text-right flex-shrink-0">
-                        <div class="text-[10px] text-amber-400 font-bold"><span id="p${p.id}ScoreText">${p.score}</span> Pts</div>
-                        <div class="text-[9px] text-slate-400 font-semibold">Petak <span id="p${p.id}PosText" class="text-white">${p.pos}</span></div>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+            // Base Board
+            const baseGeo = new THREE.BoxGeometry(16.5, 0.6, 16.5);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.3, metalness: 0.2 });
+            const baseMesh = new THREE.Mesh(baseGeo, baseMat);
+            baseMesh.position.y = -0.3;
+            baseMesh.receiveShadow = true;
+            boardGroup.add(baseMesh);
+
+            // Generate 100 Squares matching image reference palette
+            // Color palette from image: Pink, Purple, Yellow, Cyan/Turquoise, Blue
+            const squareGeo = new THREE.BoxGeometry(1.5, 0.2, 1.5);
+            const palette = [0xd8b4fe, 0xf472b6, 0xfacc15, 0x2dd4bf, 0x60a5fa];
+
+            for (let i = 0; i < 100; i++) {
+                const row = Math.floor(i / 10);
+                const col = (row % 2 === 0) ? (i % 10) : (9 - (i % 10));
+                
+                const x = (col - 4.5) * 1.55;
+                const z = (4.5 - row) * 1.55;
+                const y = 0;
+
+                const squareNumber = i + 1;
+                squarePositions[squareNumber] = new THREE.Vector3(x, y + 0.1, z);
+
+                const color = palette[(col + row * 2) % palette.length];
+                const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.35, metalness: 0.05 });
+                const squareMesh = new THREE.Mesh(squareGeo, mat);
+                squareMesh.position.set(x, y, z);
+                squareMesh.receiveShadow = true;
+                squareMesh.castShadow = true;
+                boardGroup.add(squareMesh);
+
+                // Add Number Label using Canvas Texture (Bold White 3D Text Style)
+                const canvas = document.createElement('canvas');
+                canvas.width = 128;
+                canvas.height = 128;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, 128, 128);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 70px "Fredoka One", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.4)';
+                ctx.shadowBlur = 6;
+                ctx.shadowOffsetX = 3;
+                ctx.shadowOffsetY = 3;
+                ctx.fillText(squareNumber.toString(), 64, 64);
+
+                const tex = new THREE.CanvasTexture(canvas);
+                const numGeo = new THREE.PlaneGeometry(1.2, 1.2);
+                const numMat = new THREE.MeshBasicMaterial({ map: tex, transparent: true });
+                const numMesh = new THREE.Mesh(numGeo, numMat);
+                numMesh.rotation.x = -Math.PI / 2;
+                numMesh.position.set(x, y + 0.11, z);
+                boardGroup.add(numMesh);
+            }
         }
 
-        function updateScoresUI() {
-            players.forEach(p => {
-                const el = document.getElementById(`p${p.id}ScoreText`);
-                if (el) el.innerText = p.score;
-            });
-        }
+        function createLadders3D() {
+            Object.entries(gameState.ladders).forEach(([start, end]) => {
+                const startPos = squarePositions[start];
+                const endPos = squarePositions[end];
 
-        function updateTurnUI() {
-            const activeP = players[currentPlayerIdx];
-            if (!activeP) return;
+                if (!startPos || !endPos) return;
 
-            const turnBadge = document.getElementById('turnBadge');
-            const turnPlayerName = document.getElementById('turnPlayerName');
+                const group = new THREE.Group();
+                const ladderMat = new THREE.MeshStandardMaterial({ 
+                    color: 0xe67e22, 
+                    roughness: 0.4, 
+                    metalness: 0.1 
+                });
 
-            if (turnBadge) {
-                turnBadge.className = `w-10 h-10 rounded-xl ${activeP.config.bgClass} flex items-center justify-center text-white text-lg font-bold shadow-md`;
-                turnBadge.innerText = activeP.id;
-            }
+                // Hitung vektor arah dari titik awal ke titik akhir
+                const dir = new THREE.Vector3().subVectors(endPos, startPos);
+                const len = dir.length();
 
-            if (turnPlayerName) {
-                turnPlayerName.innerText = `${activeP.name} (${activeP.config.color.toUpperCase()})`;
-            }
+                // 1. Tiang Tangga Kiri & Kanan (Rails)
+                const railRadius = 0.04;
+                const railGeo = new THREE.CylinderGeometry(railRadius, railRadius, len, 12);
+                
+                // Tiang Kiri
+                const leftRail = new THREE.Mesh(railGeo, ladderMat);
+                leftRail.position.set(-0.3, len / 2, 0);
+                leftRail.castShadow = true;
+                group.add(leftRail);
 
-            players.forEach(p => {
-                const card = document.getElementById(`p${p.id}Card`);
-                if (card) {
-                    if (p.id === activeP.id) {
-                        card.className = `bg-slate-900/90 border-2 ${p.config.borderClass} p-2 rounded-2xl shadow-lg flex items-center justify-between transition-all scale-[1.02]`;
-                    } else {
-                        card.className = `bg-slate-900/90 border-2 border-transparent p-2 rounded-2xl shadow-lg flex items-center justify-between transition-all opacity-80`;
-                    }
+                // Tiang Kanan
+                const rightRail = new THREE.Mesh(railGeo, ladderMat);
+                rightRail.position.set(0.3, len / 2, 0);
+                rightRail.castShadow = true;
+                group.add(rightRail);
+
+                // 2. Anak Tangga (Rungs)
+                const stepSpacing = 0.45;
+                const rungsCount = Math.floor(len / stepSpacing);
+                const rungGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.6, 12);
+
+                for (let i = 1; i <= rungsCount; i++) {
+                    const rung = new THREE.Mesh(rungGeo, ladderMat);
+                    rung.rotation.z = Math.PI / 2; // Buat melintang horizontal
+                    rung.position.set(0, i * stepSpacing, 0);
+                    rung.castShadow = true;
+                    group.add(rung);
                 }
+
+                // 3. Posisikan dan Miringkan Seluruh Objek Tangga dengan Presisi
+                group.position.copy(startPos);
+                
+                // Buat tangga menghadap ke titik tujuan
+                const targetPoint = endPos.clone();
+                group.lookAt(targetPoint);
+                
+                // Putar sumbu Y ke X agar sejajar arah kemiringan
+                group.rotateX(Math.PI / 2);
+
+                boardGroup.add(group);
+            });
+        }
+
+        function createSnakes3D() {
+            // Colors matching image: Bright Coral Red / Pink & Bright Lime Green
+            const snakeColors = [0xf43f5e, 0x10b981, 0xf43f5e, 0x10b981];
+            let cIdx = 0;
+
+            Object.entries(gameState.snakes).forEach(([start, end]) => {
+                const headPos = squarePositions[start];
+                const tailPos = squarePositions[end];
+
+                const points = [];
+                const segments = 16;
+                const isGreen = (cIdx % 2 === 1);
+                const snakeColor = snakeColors[cIdx % snakeColors.length];
+                cIdx++;
+
+                for (let i = 0; i <= segments; i++) {
+                    const t = i / segments;
+                    const p = new THREE.Vector3().lerpVectors(headPos, tailPos, t);
+                    // Add smooth wavy curve like in reference picture
+                    const wave = Math.sin(t * Math.PI * 2.5) * 0.6 * (isGreen ? 1 : -1);
+                    p.x += wave;
+                    p.y += Math.sin(t * Math.PI) * 0.9 + 0.15;
+                    points.push(p);
+                }
+
+                const curve = new THREE.CatmullRomCurve3(points);
+                const tubeGeo = new THREE.TubeGeometry(curve, 40, 0.16, 12, false);
+                const snakeMat = new THREE.MeshStandardMaterial({
+                    color: snakeColor,
+                    roughness: 0.25,
+                    metalness: 0.1
+                });
+                const snakeMesh = new THREE.Mesh(tubeGeo, snakeMat);
+                snakeMesh.castShadow = true;
+                boardGroup.add(snakeMesh);
+
+                // Snake Head (Smooth Sphere at the top end)
+                const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+                const headMesh = new THREE.Mesh(headGeo, snakeMat);
+                headMesh.position.copy(headPos).add(new THREE.Vector3(0, 0.25, 0));
+                headMesh.castShadow = true;
+                boardGroup.add(headMesh);
+
+                // Snake Eyes
+                const eyeGeo = new THREE.SphereGeometry(0.06, 8, 8);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const pupilMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
+
+                const eyeL = new THREE.Mesh(eyeGeo, eyeMat);
+                eyeL.position.copy(headPos).add(new THREE.Vector3(-0.1, 0.4, 0.1));
+                const eyeR = new THREE.Mesh(eyeGeo, eyeMat);
+                eyeR.position.copy(headPos).add(new THREE.Vector3(0.1, 0.4, 0.1));
+                boardGroup.add(eyeL);
+                boardGroup.add(eyeR);
+            });
+        }
+
+        function createPlayers3D() {
+            const offsets = [
+                new THREE.Vector3(-0.3, 0, -0.3),
+                new THREE.Vector3(0.3, 0, -0.3),
+                new THREE.Vector3(-0.3, 0, 0.3),
+                new THREE.Vector3(0.3, 0, 0.3)
+            ];
+
+            for (let p = 1; p <= 4; p++) {
+                const group = new THREE.Group();
+                const col = gameState.colors[p].primary;
+
+                // Cute Pill / Capsule Cartoon Character like in reference image
+                // Lower Body
+                const bodyGeo = new THREE.CylinderGeometry(0.22, 0.24, 0.5, 16);
+                const bodyMat = new THREE.MeshStandardMaterial({ color: col, roughness: 0.3 });
+                const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+                bodyMesh.position.y = 0.25;
+                bodyMesh.castShadow = true;
+                group.add(bodyMesh);
+
+                // Head Dome
+                const headGeo = new THREE.SphereGeometry(0.23, 16, 16);
+                const headMesh = new THREE.Mesh(headGeo, bodyMat);
+                headMesh.position.y = 0.5;
+                headMesh.castShadow = true;
+                group.add(headMesh);
+
+                // Visor / Cap Lip
+                const visorGeo = new THREE.BoxGeometry(0.3, 0.08, 0.15);
+                const visorMat = new THREE.MeshStandardMaterial({ color: 0x0284c7, roughness: 0.2 });
+                const visorMesh = new THREE.Mesh(visorGeo, visorMat);
+                visorMesh.position.set(0, 0.52, 0.18);
+                visorMesh.castShadow = true;
+                group.add(visorMesh);
+
+                group.userData = { offset: offsets[p - 1] };
+                // Sembunyikan karakter jika jumlah pemain aktif kurang dari indeks pemain p
+                group.visible = (p <= gameState.playerCount);
+
+                playerMeshes[p] = group;
+                scene.add(group);
+
+                updatePlayerMeshPos(p, 1, false);
+            }
+        }
+
+        function createDice3D() {
+            // Membuat tekstur canvas untuk tiap sisi dadu dengan titik/angka berwarna hitam pekat
+            const materials = [];
+            const pipsMap = [
+                [4],                   // Side 1
+                [0, 8],                // Side 2
+                [0, 4, 8],             // Side 3
+                [0, 2, 6, 8],          // Side 4
+                [0, 2, 4, 6, 8],       // Side 5
+                [0, 2, 3, 5, 6, 8]     // Side 6
+            ];
+
+            const gridPos = [
+                [0.25, 0.25], [0.5, 0.25], [0.75, 0.25],
+                [0.25, 0.5],  [0.5, 0.5],  [0.75, 0.5],
+                [0.25, 0.75], [0.5, 0.75], [0.75, 0.75]
+            ];
+
+            pipsMap.forEach(dots => {
+                const cvs = document.createElement('canvas');
+                cvs.width = 128;
+                cvs.height = 128;
+                const ctx = cvs.getContext('2d');
+
+                // Latar belakang dadu putih bersih
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, 128, 128);
+
+                // Lis / Border halus
+                ctx.strokeStyle = '#cbd5e1';
+                ctx.lineWidth = 6;
+                ctx.strokeRect(3, 3, 122, 122);
+
+                // Titik angka dadu BERWARNA HITAM PEKAT
+                ctx.fillStyle = '#0f172a';
+                dots.forEach(posIdx => {
+                    const [px, py] = gridPos[posIdx];
+                    ctx.beginPath();
+                    ctx.arc(px * 128, py * 128, 11, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+
+                const texture = new THREE.CanvasTexture(cvs);
+                materials.push(new THREE.MeshStandardMaterial({
+                    map: texture,
+                    roughness: 0.2,
+                    metalness: 0.1
+                }));
             });
 
-            document.getElementById('turnPlayerPos').innerText = `Petak ${activeP.pos}`;
+            const diceGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+            diceMesh = new THREE.Mesh(diceGeo, materials);
+            diceMesh.position.set(0, 5, 0);
+            diceMesh.castShadow = true;
+            diceMesh.visible = false;
+            scene.add(diceMesh);
         }
 
-        function rollDice() {
-            if (isRolling || isModalOpen) return;
-            initAudio();
-            isRolling = true;
+        function updatePlayerMeshPos(pNum, squareNum, animate = true) {
+            const basePos = squarePositions[squareNum] || new THREE.Vector3(0, 0.1, 0);
+            const offset = playerMeshes[pNum].userData.offset;
+            const targetPos = basePos.clone().add(offset);
 
-            const btnRoll = document.getElementById('btnRoll');
-            btnRoll.disabled = true;
-            btnRoll.classList.add('opacity-50', 'cursor-not-allowed');
-
-            playSound('dice');
-
-            const diceElement = document.getElementById('diceElement');
-            const diceResultText = document.getElementById('diceResultText');
-
-            const rollVal = Math.floor(Math.random() * 6) + 1;
-            const rotX = Math.floor(Math.random() * 360) + 720;
-            const rotY = Math.floor(Math.random() * 360) + 720;
-
-            diceElement.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-            diceResultText.innerText = "...";
-
-            setTimeout(() => {
-                diceElement.style.transform = 'none';
-                diceResultText.innerText = rollVal;
-                executeRoll(rollVal);
-            }, 800);
-        }
-
-        function executeRoll(rollVal) {
-            const activeP = players[currentPlayerIdx];
-            const startPos = activeP.pos;
-            let targetPos = startPos + rollVal;
-
-            if (targetPos > 100) {
-                const overshoot = targetPos - 100;
-                targetPos = 100 - overshoot;
-                logMessage(`<b>${activeP.name}</b> melempar <b>${rollVal}</b>, memantul ke petak <b>${targetPos}</b>.`);
+            if (!animate) {
+                playerMeshes[pNum].position.copy(targetPos);
+                playerMeshes[pNum].rotation.x = 0;
+                playerMeshes[pNum].rotation.y = 0;
+                playerMeshes[pNum].rotation.z = 0;
             } else {
-                logMessage(`<b>${activeP.name}</b> melempar dadu angka <b>${rollVal}</b>.`);
+                playerMeshes[pNum].position.copy(targetPos);
+            }
+        }
+
+        /* --- ANIMASI KHUSUS NAIK TANGGA (CLIMBING LADDER ANIMATION) --- */
+        function animateClimbingLadder(pNum, startSq, endSq, onComplete) {
+            const mesh = playerMeshes[pNum];
+            const startPos = squarePositions[startSq].clone().add(mesh.userData.offset);
+            const endPos = squarePositions[endSq].clone().add(mesh.userData.offset);
+
+            // Putar karakter menghadap arah tangga naik
+            const dir = new THREE.Vector3().subVectors(endPos, startPos).normalize();
+            if (dir.length() > 0.001) {
+                mesh.rotation.y = Math.atan2(dir.x, dir.z);
             }
 
-            let currentStep = startPos;
-            const stepInterval = setInterval(() => {
-                if (currentStep < targetPos) currentStep++;
-                else if (currentStep > targetPos) currentStep--;
+            let progress = 0;
+            const duration = 50; // frame animasi
 
-                activeP.pos = currentStep;
-                updateTokenPositions();
+            const climbInterval = setInterval(() => {
+                progress += 1 / duration;
+                if (progress >= 1) {
+                    clearInterval(climbInterval);
+                    mesh.position.copy(endPos);
+                    mesh.rotation.x = 0;
+                    mesh.rotation.z = 0;
+                    if (onComplete) onComplete();
+                } else {
+                    // Interpolasi posisi naik tangga
+                    mesh.position.x = THREE.MathUtils.lerp(startPos.x, endPos.x, progress);
+                    mesh.position.z = THREE.MathUtils.lerp(startPos.z, endPos.z, progress);
+                    mesh.position.y = THREE.MathUtils.lerp(startPos.y, endPos.y, progress) + Math.abs(Math.sin(progress * Math.PI * 6)) * 0.25;
 
-                if (currentStep === targetPos) {
-                    clearInterval(stepInterval);
+                    // Goyangan memanjat tangga
+                    mesh.rotation.z = Math.sin(progress * Math.PI * 8) * 0.25;
+                    mesh.rotation.x = -0.2; // Sedikit menunduk/memanjat
+                }
+            }, 16);
+        }
+
+        /* --- ANIMASI KHUSUS TURUN ULAR (SLIDING SNAKE ANIMATION) --- */
+        function animateSlidingSnake(pNum, startSq, endSq, onComplete) {
+            const mesh = playerMeshes[pNum];
+            const headPos = squarePositions[startSq].clone().add(mesh.userData.offset);
+            const tailPos = squarePositions[endSq].clone().add(mesh.userData.offset);
+
+            let progress = 0;
+            const duration = 55; // frame animasi meluncur
+
+            const slideInterval = setInterval(() => {
+                progress += 1 / duration;
+                if (progress >= 1) {
+                    clearInterval(slideInterval);
+                    mesh.position.copy(tailPos);
+                    mesh.rotation.x = 0;
+                    mesh.rotation.y = 0;
+                    mesh.rotation.z = 0;
+                    if (onComplete) onComplete();
+                } else {
+                    // Jalur meluncur melengkung ikuti garis ular
+                    const midY = Math.max(headPos.y, tailPos.y) + 1.2;
+                    mesh.position.x = THREE.MathUtils.lerp(headPos.x, tailPos.x, progress) + Math.sin(progress * Math.PI * 3) * 0.4;
+                    mesh.position.z = THREE.MathUtils.lerp(headPos.z, tailPos.z, progress) + Math.cos(progress * Math.PI * 3) * 0.4;
+                    mesh.position.y = THREE.MathUtils.lerp(headPos.y, tailPos.y, progress) + Math.sin(progress * Math.PI) * 0.5;
+
+                    // Karakter berputar gasing saat tergelincir turun
+                    mesh.rotation.y += 0.35;
+                    mesh.rotation.z = 0.4;
+                }
+            }, 16);
+        }
+
+        /* --- ANIMASI BERJALAN KARAKTER KARTUN 3D (STEP BY STEP WITH JUMP & HOPS) --- */
+        function movePlayer(pNum, steps) {
+            gameState.isMoving = true;
+            let currentSquare = gameState.positions[pNum];
+            let targetSquare = currentSquare + steps;
+
+            if (targetSquare > 100) {
+                targetSquare = 100 - (targetSquare - 100);
+            }
+
+            const mesh = playerMeshes[pNum];
+            const isForward = targetSquare > currentSquare;
+            let stepQueue = [];
+
+            // Buat daftar antrean kotak yang harus dilewati satu per satu
+            let tempSquare = currentSquare;
+            while (tempSquare !== targetSquare) {
+                if (isForward) tempSquare++;
+                else tempSquare--;
+                stepQueue.push(tempSquare);
+            }
+
+            let queueIndex = 0;
+
+            function animateNextStep() {
+                if (queueIndex >= stepQueue.length) {
+                    // Selesai berjalan antar-kotak
+                    mesh.rotation.y = 0;
+                    mesh.rotation.z = 0;
+
+                    const finalSquare = stepQueue[stepQueue.length - 1];
+
                     setTimeout(() => {
-                        checkTileEvent(activeP, targetPos);
+                        if (gameState.ladders[finalSquare]) {
+                            sound.playLadder();
+                            const dest = gameState.ladders[finalSquare];
+
+                            // Panggil Animasi 3D Naik Tangga
+                            animateClimbingLadder(pNum, finalSquare, dest, () => {
+                                gameState.positions[pNum] = dest;
+                                updateUI();
+                                finishTurn(pNum, dest);
+                            });
+                        } else if (gameState.snakes[finalSquare]) {
+                            sound.playSnake();
+                            const dest = gameState.snakes[finalSquare];
+
+                            // Panggil Animasi 3D Turun Ular
+                            animateSlidingSnake(pNum, finalSquare, dest, () => {
+                                gameState.positions[pNum] = dest;
+                                updateUI();
+                                finishTurn(pNum, dest);
+                            });
+                        } else {
+                            finishTurn(pNum, finalSquare);
+                        }
                     }, 300);
-                }
-            }, 180);
-        }
-
-        function checkTileEvent(playerObj, pos) {
-            const ladder = ladders.find(l => l.start === pos);
-            const snake = snakes.find(s => s.start === pos);
-
-            if (pos === 100) {
-                pendingMove = { type: 'normal', target: pos, playerObj: playerObj };
-                triggerQuestionModal(
-                    'Tantangan Petak Akhir!',
-                    `Kamu mendarat di Petak 100! Jawab pertanyaan ini untuk mengunci kemenangan!`,
-                    'fa-trophy text-amber-400'
-                );
-                return;
-            }
-
-            if (ladder) {
-                pendingMove = { type: 'ladder', target: ladder.end, playerObj: playerObj };
-                triggerQuestionModal(
-                    'Tantangan Tangga (+10 Poin)!',
-                    `Kamu mendarat di Petak ${pos} (Kaki Tangga). Jawab BENAR untuk +10 Poin & NAIK ke Petak ${ladder.end}! Jika salah, poin 0 dan tetap di petak ${pos}.`,
-                    'fa-stairs text-emerald-400'
-                );
-            } else if (snake) {
-                pendingMove = { type: 'snake', target: snake.end, playerObj: playerObj };
-                triggerQuestionModal(
-                    'Tantangan Ular (+10 Poin)!',
-                    `Kamu mendarat di Petak ${pos} (Kepala Ular). Jawab BENAR untuk +10 Poin & SELAMAT dari ular! Jika salah, merosot ke Petak ${snake.end}.`,
-                    'fa-worm text-rose-400'
-                );
-            } else {
-                pendingMove = { type: 'normal', target: pos, playerObj: playerObj };
-                triggerQuestionModal(
-                    `Kuis Petak ${pos} (+10 Poin)`,
-                    `<b>${playerObj.name}</b> mendarat di Petak ${pos}. Jawab pertanyaan dengan BENAR untuk mendapatkan +10 Poin!`,
-                    'fa-brain text-amber-400'
-                );
-            }
-        }
-
-        function triggerQuestionModal(title, desc, iconClass) {
-            isModalOpen = true;
-
-            const qIdx = Math.floor(Math.random() * questions.length);
-            currentQuestion = questions[qIdx];
-
-            document.getElementById('modalEventTitle').innerText = title;
-            document.getElementById('modalEventDesc').innerHTML = desc;
-            document.getElementById('modalEventIcon').className = `fa-solid ${iconClass} text-2xl`;
-            document.getElementById('questionText').innerText = currentQuestion.q;
-
-            const optionsContainer = document.getElementById('optionsContainer');
-            optionsContainer.innerHTML = '';
-
-            const feedbackBox = document.getElementById('feedbackBox');
-            feedbackBox.className = 'hidden';
-            feedbackBox.innerHTML = '';
-
-            document.getElementById('btnContinue').classList.add('hidden');
-
-            currentQuestion.options.forEach((opt, idx) => {
-                const btn = document.createElement('button');
-                btn.className = 'w-full text-left bg-slate-800 hover:bg-slate-700/80 border border-slate-700 p-3 rounded-xl font-medium text-xs md:text-sm text-slate-200 transition flex items-center justify-between group';
-                btn.innerHTML = `
-                    <span><b>${String.fromCharCode(65 + idx)}.</b> ${opt}</span>
-                    <i class="fa-regular fa-circle text-slate-500 group-hover:text-amber-400"></i>
-                `;
-                btn.onclick = () => selectAnswer(idx);
-                optionsContainer.appendChild(btn);
-            });
-
-            document.getElementById('questionModal').classList.remove('hidden');
-
-            const activeP = players[currentPlayerIdx];
-            if (activeP.isBot) {
-                const willBeCorrect = Math.random() < 0.75;
-                const botChoice = willBeCorrect ? currentQuestion.answer : (currentQuestion.answer + 1) % 4;
-                setTimeout(() => {
-                    selectAnswer(botChoice);
-                }, 1600);
-            }
-        }
-
-        function selectAnswer(chosenIdx) {
-            const activeP = players[currentPlayerIdx];
-            const isCorrect = chosenIdx === currentQuestion.answer;
-            lastAnswerWasCorrect = isCorrect;
-            const feedbackBox = document.getElementById('feedbackBox');
-            const btnContinue = document.getElementById('btnContinue');
-            const optionsContainer = document.getElementById('optionsContainer');
-
-            Array.from(optionsContainer.children).forEach((btn, idx) => {
-                btn.onclick = null;
-                btn.disabled = true;
-                if (idx === currentQuestion.answer) {
-                    btn.className = 'w-full text-left bg-emerald-950/80 border-2 border-emerald-500 p-3 rounded-xl font-bold text-xs md:text-sm text-emerald-200 flex items-center justify-between';
-                    btn.innerHTML += `<i class="fa-solid fa-circle-check text-emerald-400"></i>`;
-                } else if (idx === chosenIdx && !isCorrect) {
-                    btn.className = 'w-full text-left bg-rose-950/80 border-2 border-rose-500 p-3 rounded-xl font-bold text-xs md:text-sm text-rose-200 flex items-center justify-between';
-                    btn.innerHTML += `<i class="fa-solid fa-circle-xmark text-rose-400"></i>`;
-                }
-            });
-
-            if (isCorrect) {
-                playSound('correct');
-                activeP.score += 10;
-                updateScoresUI();
-                feedbackBox.className = 'bg-emerald-950/60 border border-emerald-500/50 p-3 rounded-xl text-xs text-emerald-200 space-y-1 block';
-                feedbackBox.innerHTML = `<p class="font-bold text-emerald-400"><i class="fa-solid fa-check-circle mr-1"></i> Jawaban Tepat! (+10 Poin & Lanjut Main Lagi)</p><p>${currentQuestion.explanation}</p>`;
-                logMessage(`<b>${activeP.name}</b> menjawab <b>BENAR</b> (+10 Poin) dan berhak <b>LANJUT MAIN LAGI</b>.`);
-            } else {
-                playSound('wrong');
-                feedbackBox.className = 'bg-rose-950/60 border border-rose-500/50 p-3 rounded-xl text-xs text-rose-200 space-y-1 block';
-                feedbackBox.innerHTML = `<p class="font-bold text-rose-400"><i class="fa-solid fa-xmark-circle mr-1"></i> Jawaban Salah! (Giliran Berpindah)</p><p>${currentQuestion.explanation}</p>`;
-                logMessage(`<b>${activeP.name}</b> menjawab <b>SALAH</b>. Giliran akan berpindah.`);
-            }
-
-            if (pendingMove) {
-                if (pendingMove.type === 'ladder') {
-                    if (isCorrect) {
-                        setTimeout(() => playSound('ladder'), 400);
-                        activeP.pos = pendingMove.target;
-                        logMessage(`<b>${activeP.name}</b> memanjat TANGGA ke petak <b>${pendingMove.target}</b>!`);
-                    } else {
-                        logMessage(`<b>${activeP.name}</b> gagal memanjat tangga dan tetap di petak ${activeP.pos}.`);
-                    }
-                } else if (pendingMove.type === 'snake') {
-                    if (isCorrect) {
-                        logMessage(`<b>${activeP.name}</b> SELAMAT dari ular dan tetap di petak ${activeP.pos}!`);
-                    } else {
-                        setTimeout(() => playSound('snake'), 400);
-                        activeP.pos = pendingMove.target;
-                        logMessage(`<b>${activeP.name}</b> merosot ULAR ke petak <b>${pendingMove.target}</b>!`);
-                    }
-                }
-
-                if (activeP.pos === 100) {
-                    setTimeout(() => handleVictory(activeP), 500);
-                    pendingMove = null;
                     return;
                 }
 
-                pendingMove = null;
+                const nextSq = stepQueue[queueIndex];
+                const startPos = mesh.position.clone();
+                const targetPos = squarePositions[nextSq].clone().add(mesh.userData.offset);
+
+                // Hitung arah rotasi karakter agar menghadap kotak tujuan
+                const direction = new THREE.Vector3().subVectors(targetPos, startPos).normalize();
+                if (direction.length() > 0.001) {
+                    const angle = Math.atan2(direction.x, direction.z);
+                    mesh.rotation.y = angle;
+                }
+
+                sound.playTone(320 + queueIndex * 20, 0.04, 'sine', 0.08);
+
+                let stepProgress = 0;
+                const stepDuration = 22; // frame animasi per langkah
+                const stepInterval = setInterval(() => {
+                    stepProgress += 1 / stepDuration;
+                    if (stepProgress >= 1) {
+                        clearInterval(stepInterval);
+                        mesh.position.copy(targetPos);
+                        mesh.rotation.z = 0;
+
+                        gameState.positions[pNum] = nextSq;
+                        updateUI();
+
+                        queueIndex++;
+                        setTimeout(animateNextStep, 50); // Jeda antar-langkah
+                    } else {
+                        // Lerp Posisi X & Z
+                        mesh.position.x = THREE.MathUtils.lerp(startPos.x, targetPos.x, stepProgress);
+                        mesh.position.z = THREE.MathUtils.lerp(startPos.z, targetPos.z, stepProgress);
+                        
+                        // Parabola Lompatan Karakter (Melompat ke Atas)
+                        const jumpHeight = Math.sin(stepProgress * Math.PI) * 0.6;
+                        mesh.position.y = startPos.y + jumpHeight;
+
+                        // Goyangan/Miring Melangkah (Waddle Effect)
+                        mesh.rotation.z = Math.sin(stepProgress * Math.PI * 2) * 0.2;
+                    }
+                }, 16);
             }
 
-            updateTokenPositions();
-            btnContinue.classList.remove('hidden');
+            animateNextStep();
+        }
 
-            if (activeP.isBot) {
+        function animateKickPlayer(pNum) {
+            const mesh = playerMeshes[pNum];
+            if (!mesh) return;
+
+            sound.playSnake();
+            const startPos = mesh.position.clone();
+            const targetPos = squarePositions[1].clone().add(mesh.userData.offset);
+
+            let progress = 0;
+            const duration = 40;
+
+            const kickInterval = setInterval(() => {
+                progress += 1 / duration;
+                if (progress >= 1) {
+                    clearInterval(kickInterval);
+                    mesh.position.copy(targetPos);
+                    mesh.rotation.x = 0;
+                    mesh.rotation.y = 0;
+                    mesh.rotation.z = 0;
+                    gameState.positions[pNum] = 1;
+                    updateUI();
+                } else {
+                    mesh.position.x = THREE.MathUtils.lerp(startPos.x, targetPos.x, progress);
+                    mesh.position.z = THREE.MathUtils.lerp(startPos.z, targetPos.z, progress);
+                    mesh.position.y = startPos.y + Math.sin(progress * Math.PI) * 3.5;
+
+                    mesh.rotation.x += 0.2;
+                    mesh.rotation.y += 0.3;
+                }
+            }, 16);
+        }
+
+        function checkCollision(landingPlayer, squareNum) {
+            if (squareNum <= 1) return;
+
+            for (let p = 1; p <= gameState.playerCount; p++) {
+                if (p !== landingPlayer && gameState.positions[p] === squareNum) {
+                    const victimName = gameState.playerNames[p];
+                    const attackerName = gameState.playerNames[landingPlayer];
+
+                    showNotification(
+                        attackerName,
+                        `Menendang ${victimName} Kembali ke Kotak 1!`,
+                        'fa-user-ninja'
+                    );
+
+                    animateKickPlayer(p);
+                }
+            }
+        }
+
+        function finishTurn(pNum, finalSquare) {
+            checkCollision(pNum, finalSquare);
+
+            if (finalSquare === 100) {
+                sound.playWin();
+                document.getElementById('winner-text').innerText = `${gameState.playerNames[pNum]} Berhasil Mencapai Kotak 100 & Memenangkan Permainan!`;
+                document.getElementById('modal-winner').classList.remove('hidden');
+                gameState.isMoving = false;
+                return;
+            }
+
+            gameState.isMoving = false;
+
+            // Pindah Giliran ke Pemain Berikutnya
+            gameState.currentPlayer = (gameState.currentPlayer % gameState.playerCount) + 1;
+            updateUI();
+
+            // Jika mode 1 Pemain (vs Bot) dan giliran Pemain 2
+            if (gameState.playerCount === 1 && gameState.currentPlayer === 2) {
                 setTimeout(() => {
-                    closeQuestionModal();
-                }, 2400);
-            }
-        }
-
-        function closeQuestionModal() {
-            document.getElementById('questionModal').classList.add('hidden');
-            isModalOpen = false;
-            finishTurn(lastAnswerWasCorrect);
-        }
-
-        function finishTurn(wasCorrect) {
-            isRolling = false;
-            const btnRoll = document.getElementById('btnRoll');
-            btnRoll.disabled = false;
-            btnRoll.classList.remove('opacity-50', 'cursor-not-allowed');
-
-            if (wasCorrect) {
-                const activeP = players[currentPlayerIdx];
-                logMessage(`<b>${activeP.name}</b> menjawab benar dan berhak melempar dadu lagi!`);
-                updateTurnUI();
-                checkBotTurnTrigger();
-            } else {
-                currentPlayerIdx = (currentPlayerIdx + 1) % players.length;
-                const nextP = players[currentPlayerIdx];
-                logMessage(`Giliran berpindah ke <b>${nextP.name}</b>.`);
-                updateTurnUI();
-                checkBotTurnTrigger();
-            }
-        }
-
-        function checkBotTurnTrigger() {
-            const activeP = players[currentPlayerIdx];
-            const btnRoll = document.getElementById('btnRoll');
-
-            if (activeP && activeP.isBot) {
-                btnRoll.disabled = true;
-                btnRoll.classList.add('opacity-50', 'cursor-not-allowed');
-                logMessage(`<b>${activeP.name}</b> sedang berpikir...`);
-                setTimeout(() => {
-                    if (!isModalOpen) rollDice();
+                    if (!gameState.isRolling && !gameState.isMoving) {
+                        handleDiceRoll();
+                    }
                 }, 1200);
             }
         }
 
-        function logMessage(msg) {
-            const logContainer = document.getElementById('gameLog');
-            if (!logContainer) return;
-            const p = document.createElement('p');
-            p.className = 'text-[11px] text-slate-300 leading-tight border-b border-slate-800/40 pb-1';
-            p.innerHTML = msg;
-            logContainer.insertBefore(p, logContainer.firstChild);
-        }
-
-        function handleVictory(winnerP) {
-            playSound('win');
-            const winnerTitle = document.getElementById('winnerTitle');
-            const winnerSub = document.getElementById('winnerSub');
-
-            winnerTitle.innerText = `${winnerP.name} Menang! 🎉`;
-            winnerSub.innerText = `Selamat kepada ${winnerP.name} yang telah mencapai Petak 100 dan menguasai Sejarah Kelahiran Pancasila!`;
-
-            const winP1Score = document.getElementById('winP1Score');
-            const winP2Score = document.getElementById('winP2Score');
-            const winP2Name = document.getElementById('winP2Name');
-
-            if (winP1Score) winP1Score.innerText = `${winnerP.score} Pts`;
-            if (winP2Name) winP2Name.innerText = `Posisi Akhir:`;
-            if (winP2Score) winP2Score.innerText = `Petak 100`;
-
-            document.getElementById('victoryModal').classList.remove('hidden');
-        }
-
-        function restartGameConfirm() {
-            if (confirm("Apakah Anda yakin ingin mengulang permainan dari awal?")) {
-                startGameFromConfig();
+        /* ==========================================================================
+           4. GAME LOGIC & UI HANDLERS
+           ========================================================================== */
+        function updateUI() {
+            // Update Banner Giliran
+            const turnDisplay = document.getElementById('turn-display');
+            const currP = gameState.currentPlayer;
+            if (turnDisplay) {
+                turnDisplay.innerText = gameState.playerNames[currP];
+                turnDisplay.className = `font-game text-xs sm:text-base leading-tight ${gameState.colors[currP].class}`;
             }
-        }
 
-        function resetToMenu() {
-            document.getElementById('victoryModal').classList.add('hidden');
-            document.getElementById('startModal').classList.remove('hidden');
-        }
+            // Update Cards Status & Visibilitas Pion 3D Pemain
+            for (let p = 1; p <= 4; p++) {
+                const card = document.getElementById(`p${p}-card`);
+                const label = document.getElementById(`p${p}-label`);
+                const pos = document.getElementById(`p${p}-pos`);
+                const score = document.getElementById(`p${p}-score`);
 
-        function goToMenuConfirm() {
-            if (confirm("Apakah Anda yakin ingin kembali ke Menu Utama? Permainan yang sedang berjalan akan direset.")) {
-                document.getElementById('startModal').classList.remove('hidden');
-                players.forEach(p => {
-                    const tok = document.getElementById(`player${p.id}Token`);
-                    if (tok) tok.classList.add('hidden');
-                });
-            }
-        }
+                const isActive = (p <= gameState.playerCount);
 
-        function showInfoModal() {
-            document.getElementById('infoModal').classList.remove('hidden');
-        }
+                // Sembunyikan / Tampilkan Pion 3D di Papan sesuai Jumlah Pemain Aktif
+                if (playerMeshes[p]) {
+                    playerMeshes[p].visible = isActive;
+                }
 
-        function closeInfoModal() {
-            document.getElementById('infoModal').classList.add('hidden');
-        }
-
-        function showScoreModal() {
-            const listContainer = document.getElementById('modalScoreList');
-            if (!listContainer) return;
-            listContainer.innerHTML = '';
-
-            const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-
-            sortedPlayers.forEach((p) => {
-                const div = document.createElement('div');
-                div.className = `bg-slate-950/60 border ${p.config.borderClass} p-3 rounded-2xl flex items-center justify-between`;
-                div.innerHTML = `
-                    <div class="flex items-center space-x-3">
-                        <div class="w-9 h-9 rounded-xl ${p.config.bgClass} flex items-center justify-center text-white text-xs font-bold shadow">
-                            <i class="${p.isBot ? 'fa-solid fa-robot' : 'fa-solid fa-user'}"></i>
-                        </div>
-                        <div>
-                            <div class="text-xs font-bold text-white flex items-center space-x-1">
-                                <span>${p.name}</span>
-                                <span class="text-[9px] text-slate-400 font-normal">(${p.config.color})</span>
-                            </div>
-                            <div class="text-[10px] text-slate-400">Posisi: Petak <span class="text-amber-400 font-bold">${p.pos}</span></div>
-                        </div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-base font-extrabold text-amber-400">${p.score}</div>
-                        <div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Poin</div>
-                    </div>
-                `;
-                listContainer.appendChild(div);
-            });
-
-            const statusMsg = document.getElementById('scoreStatusMessage');
-            if (sortedPlayers.length > 1) {
-                const leader = sortedPlayers[0];
-                const runnerUp = sortedPlayers[1];
-                const diff = leader.score - runnerUp.score;
-                if (diff > 0) {
-                    statusMsg.innerHTML = `<i class="fa-solid fa-crown text-amber-400 mr-1"></i> <b>${leader.name}</b> memimpin dengan selisih <b>${diff} Poin</b>!`;
+                if (isActive) {
+                    if (card) {
+                        card.classList.remove('hidden');
+                        if (p === gameState.currentPlayer) {
+                            card.classList.remove('opacity-50');
+                            card.classList.add('scale-105', 'shadow-lg');
+                        } else {
+                            card.classList.add('opacity-50');
+                            card.classList.remove('scale-105', 'shadow-lg');
+                        }
+                    }
+                    if (label) label.innerText = gameState.playerNames[p];
+                    if (pos) pos.innerText = `Kt: ${gameState.positions[p]}`;
+                    if (score) score.innerText = `Skor: ${gameState.scores[p]}`;
                 } else {
-                    statusMsg.innerHTML = `<i class="fa-solid fa-scale-balanced text-amber-400 mr-1"></i> Skor posisi teratas saat ini <b>seimbang (${leader.score} Pts)</b>!`;
+                    if (card) card.classList.add('hidden');
                 }
             }
-
-            document.getElementById('scoreScoreModal')?.classList.remove('hidden');
-            document.getElementById('scoreModal').classList.remove('hidden');
         }
 
-        function closeScoreModal() {
-            document.getElementById('scoreModal').classList.add('hidden');
+        function showNotification(player, text, iconClass = 'fa-dice') {
+            const notif = document.getElementById('dice-notification');
+            const notifPlayer = document.getElementById('dice-notif-player');
+            const notifText = document.getElementById('dice-notif-text');
+            const notifIcon = document.getElementById('dice-notif-icon');
+
+            if (!notif) return;
+
+            notifPlayer.innerText = player;
+            notifText.innerHTML = text;
+            notifIcon.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+
+            notif.classList.remove('hidden');
+            setTimeout(() => {
+                notif.classList.remove('scale-90', 'opacity-0');
+                notif.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+            setTimeout(() => {
+                notif.classList.remove('scale-100', 'opacity-100');
+                notif.classList.add('scale-90', 'opacity-0');
+                setTimeout(() => notif.classList.add('hidden'), 300);
+            }, 2500);
         }
 
-        /* Initializer on window load */
-        window.onload = function() {
-            selectPlayerCount(2);
-            renderBoard();
-            window.addEventListener('resize', () => {
-                drawSnakesAndLadders();
-                updateTokenPositions();
+        /* --- LOGIKA KUIS / SOAL --- */
+        function showQuizModal() {
+            sound.init();
+            const currP = gameState.currentPlayer;
+
+            // Dapatkan tingkat kelas spesifik pemain aktif (Konversi tegas ke Angka / Number)
+            const playerGrade = Number(gameState.playerGrades[currP] || gameState.grade || 1);
+            const mainSubject = gameState.subject;
+
+            // Filter Soal secara presisi sesuai kelas pemain
+            let validQuestions = QUESTION_BANK.filter(q => {
+                const matchGrade = Number(q.grade) === playerGrade;
+                const matchSubject = (mainSubject === 'all') ? true : (q.subject === mainSubject);
+                return matchGrade && matchSubject;
             });
+
+            // Jika filter kaku tidak menemukan soal, cari soal berdasarkan kelas tanpa batasan mapel
+            if (validQuestions.length === 0) {
+                validQuestions = QUESTION_BANK.filter(q => Number(q.grade) === playerGrade);
+            }
+
+            // Jika masih kosong, ambil soal apa saja
+            if (validQuestions.length === 0) {
+                validQuestions = QUESTION_BANK;
+            }
+
+            // Pilih soal acak yang belum pernah dipakai
+            let unused = validQuestions.filter((_, idx) => !usedQuestionIndexes.has(QUESTION_BANK.indexOf(validQuestions[idx])));
+            if (unused.length === 0) {
+                // Reset tracker jika semua soal sudah dipakai
+                usedQuestionIndexes.clear();
+                unused = validQuestions;
+            }
+
+            const chosenQuestion = unused[Math.floor(Math.random() * unused.length)];
+            const globalIdx = QUESTION_BANK.indexOf(chosenQuestion);
+            if (globalIdx !== -1) usedQuestionIndexes.add(globalIdx);
+
+            gameState.currentQuestion = chosenQuestion;
+
+            // Update UI Modal Kuis
+            document.getElementById('quiz-subject-badge').innerText = chosenQuestion.subject.toUpperCase();
+            document.getElementById('quiz-grade-badge').innerText = `Kelas ${chosenQuestion.grade}`;
+            document.getElementById('quiz-question').innerText = chosenQuestion.q;
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            const feedback = document.getElementById('quiz-feedback');
+            feedback.className = 'hidden p-3 sm:p-4 rounded-xl text-center font-game text-sm sm:text-lg border transition-all duration-300';
+            feedback.innerHTML = '';
+
+            const optionLabels = ['A', 'B', 'C', 'D'];
+            chosenQuestion.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'glass-card p-3 rounded-xl border border-slate-700 hover:border-amber-400 text-left font-semibold text-xs sm:text-sm transition duration-150 flex items-center gap-2.5 active:scale-98 text-slate-200';
+                btn.innerHTML = `<span class="w-6 h-6 rounded-lg bg-amber-400/20 text-amber-300 flex items-center justify-center font-game text-xs shrink-0">${optionLabels[idx]}</span> <span>${optText}</span>`;
+                btn.onclick = () => handleAnswer(idx);
+                optionsContainer.appendChild(btn);
+            });
+
+            document.getElementById('modal-quiz').classList.remove('hidden');
+
+            // Jika Bot (Pemain 2 pada mode 1 Player), otomatis jawab
+            if (gameState.playerCount === 1 && currP === 2) {
+                setTimeout(() => {
+                    const isBotCorrect = Math.random() < 0.8;
+                    const botAnswer = isBotCorrect ? chosenQuestion.answer : (chosenQuestion.answer + 1) % 4;
+                    handleAnswer(botAnswer);
+                }, 1500);
+            }
+        }
+
+        function handleAnswer(selectedIndex) {
+            const q = gameState.currentQuestion;
+            if (!q) return;
+
+            const feedback = document.getElementById('quiz-feedback');
+            const optionsContainer = document.getElementById('quiz-options');
+            const buttons = optionsContainer.querySelectorAll('button');
+
+            // Nonaktifkan semua tombol
+            buttons.forEach(btn => btn.disabled = true);
+
+            const isCorrect = (selectedIndex === q.answer);
+
+            if (isCorrect) {
+                sound.playCorrect();
+                gameState.scores[gameState.currentPlayer] += 10;
+                feedback.innerHTML = '<i class="fa-solid fa-circle-check mr-2"></i> Jawaban Benar! Meluncur Mengocok Dadu...';
+                feedback.className = 'p-3 sm:p-4 rounded-xl text-center font-game text-sm sm:text-base border transition-all duration-300 bg-emerald-500/20 border-emerald-400 text-emerald-300';
+            } else {
+                sound.playWrong();
+                feedback.innerHTML = `<i class="fa-solid fa-circle-xmark mr-2"></i> Kurang Tepat! Jawaban Benar: <b>${q.options[q.answer]}</b>`;
+                feedback.className = 'p-3 sm:p-4 rounded-xl text-center font-game text-sm sm:text-base border transition-all duration-300 bg-rose-500/20 border-rose-400 text-rose-300';
+            }
+
+            feedback.classList.remove('hidden');
+
+            setTimeout(() => {
+                document.getElementById('modal-quiz').classList.add('hidden');
+                handleDiceRoll(isCorrect);
+            }, 1800);
+        }
+
+        function handleDiceRoll(isCorrect = true) {
+            if (gameState.isRolling || gameState.isMoving) return;
+            gameState.isRolling = true;
+
+            const currP = gameState.currentPlayer;
+            const pName = gameState.playerNames[currP];
+
+            sound.playDiceRoll();
+
+            // Jika jawaban salah, dadu tetap dikocok tapi nilainya dibatasi (1-2)
+            const diceValue = isCorrect ? Math.floor(Math.random() * 6) + 1 : Math.floor(Math.random() * 2) + 1;
+
+            showNotification(pName, `Mendapatkan Dadu <span class="text-yellow-400 font-bold">${diceValue}</span>!`);
+
+            diceMesh.visible = true;
+            let rolls = 0;
+            const rollInterval = setInterval(() => {
+                diceMesh.rotation.x += 0.4;
+                diceMesh.rotation.y += 0.5;
+                diceMesh.position.y = 3 + Math.sin(rolls * 0.5) * 1.5;
+                rolls++;
+
+                if (rolls > 15) {
+                    clearInterval(rollInterval);
+                    diceMesh.visible = false;
+                    gameState.isRolling = false;
+
+                    // Gerakkan pemain
+                    movePlayer(currP, diceValue);
+                }
+            }, 50);
+        }
+
+        function onWindowResize() {
+            const isMobile = window.innerWidth < 640;
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+
+            camera.position.set(0, isMobile ? 28 : 20, isMobile ? 28 : 22);
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (controls) controls.update();
+            if (renderer && scene && camera) renderer.render(scene, camera);
+        }
+
+        /* ==========================================================================
+           5. EVENT LISTENERS INITIALIZATION
+           ========================================================================== */
+        window.onload = function () {
+            init3D();
+            updateUI();
+
+            // Event Mulai Game
+            const btnStart = document.getElementById('btn-start-game');
+            if (btnStart) {
+                btnStart.onclick = function () {
+                    // Simpan nama pemain kustom
+                    gameState.playerNames[1] = document.getElementById('input-p1-name').value || 'Pemain 1';
+                    gameState.playerNames[2] = document.getElementById('input-p2-name').value || 'Pemain 2';
+                    gameState.playerNames[3] = document.getElementById('input-p3-name').value || 'Pemain 3';
+                    gameState.playerNames[4] = document.getElementById('input-p4-name').value || 'Pemain 4';
+
+                    // Simpan Mata Pelajaran
+                    gameState.subject = document.getElementById('subject-select').value;
+
+                    // Sembunyikan modal setup & mulai BGM
+                    document.getElementById('modal-setup').classList.add('hidden');
+                    sound.init();
+                    sound.playMarioBGM();
+                    updateUI();
+                };
+            }
+
+            // Selector Jumlah Pemain
+            document.querySelectorAll('.btn-pcount').forEach(btn => {
+                btn.onclick = function () {
+                    document.querySelectorAll('.btn-pcount').forEach(b => {
+                        b.classList.remove('border-amber-400', 'bg-amber-400/20', 'text-amber-300');
+                        b.classList.add('border-slate-700', 'text-slate-300');
+                    });
+                    this.classList.remove('border-slate-700', 'text-slate-300');
+                    this.classList.add('border-amber-400', 'bg-amber-400/20', 'text-amber-300');
+
+                    const count = Number(this.dataset.count);
+                    gameState.playerCount = count;
+
+                    // Tampilkan/Sembunyikan Input Nama Pemain
+                    document.getElementById('p2-input-box').classList.toggle('hidden', false);
+                    document.getElementById('p3-input-box').classList.toggle('hidden', count < 3);
+                    document.getElementById('p4-input-box').classList.toggle('hidden', count < 4);
+                };
+            });
+
+            // Selector Tingkat Kelas Utama
+            document.querySelectorAll('.btn-grade').forEach(btn => {
+                btn.onclick = function () {
+                    document.querySelectorAll('.btn-grade').forEach(b => {
+                        b.classList.remove('border-amber-400', 'bg-amber-400/20', 'text-amber-300');
+                        b.classList.add('border-slate-700', 'text-slate-300');
+                    });
+                    this.classList.remove('border-slate-700', 'text-slate-300');
+                    this.classList.add('border-amber-400', 'bg-amber-400/20', 'text-amber-300');
+
+                    const selGrade = Number(this.dataset.grade);
+                    gameState.grade = selGrade;
+                    for (let p = 1; p <= 4; p++) {
+                        gameState.playerGrades[p] = selGrade;
+                    }
+                };
+            });
+
+            // Tombol Kocok Dadu Utama
+            const btnRoll = document.getElementById('btn-roll');
+            if (btnRoll) {
+                btnRoll.onclick = function () {
+                    if (!gameState.isRolling && !gameState.isMoving) {
+                        showQuizModal();
+                    }
+                };
+            }
+
+            // Tombol Pengaturan Top Bar
+            const btnSettings = document.getElementById('btn-settings');
+            if (btnSettings) {
+                btnSettings.onclick = () => {
+                    document.getElementById('modal-setup').classList.remove('hidden');
+                };
+            }
+
+            // Tombol Musik Super Mario
+            const btnMusic = document.getElementById('btn-music');
+            if (btnMusic) {
+                btnMusic.onclick = () => {
+                    const active = sound.toggleMarioBGM();
+                    const icon = document.getElementById('music-icon');
+                    if (icon) {
+                        icon.className = active ? 'fa-solid fa-music' : 'fa-solid fa-volume-xmark';
+                    }
+                };
+            }
+
+            // Tombol Reset Kamera
+            const btnCamReset = document.getElementById('btn-camera-reset');
+            if (btnCamReset) {
+                btnCamReset.onclick = () => onWindowResize();
+            }
+
+            // Mode Guru Listeners
+            const btnTeacher = document.getElementById('btn-teacher-mode');
+            if (btnTeacher) {
+                btnTeacher.onclick = () => {
+                    document.getElementById('modal-teacher').classList.remove('hidden');
+                };
+            }
+
+            const btnVerifyPin = document.getElementById('btn-verify-pin');
+            if (btnVerifyPin) {
+                btnVerifyPin.onclick = () => {
+                    const pin = document.getElementById('teacher-pin-input').value;
+                    if (pin === '1234') {
+                        document.getElementById('teacher-pin-box').classList.add('hidden');
+                        document.getElementById('teacher-panel').classList.remove('hidden');
+                    } else {
+                        alert('PIN Salah! (Default: 1234)');
+                    }
+                };
+            }
+
+            const btnCloseTeacher = document.getElementById('btn-close-teacher');
+            if (btnCloseTeacher) {
+                btnCloseTeacher.onclick = () => {
+                    document.getElementById('modal-teacher').classList.add('hidden');
+                };
+            }
+
+            const btnExitTeacher = document.getElementById('btn-exit-teacher');
+            if (btnExitTeacher) {
+                btnExitTeacher.onclick = () => {
+                    document.getElementById('modal-teacher').classList.add('hidden');
+                };
+            }
+
+            // Simpan Kelas per Pemain di Mode Guru
+            const btnSavePlayerGrades = document.getElementById('btn-save-player-grades');
+            if (btnSavePlayerGrades) {
+                btnSavePlayerGrades.onclick = () => {
+                    gameState.playerGrades[1] = Number(document.getElementById('teacher-p1-grade').value);
+                    gameState.playerGrades[2] = Number(document.getElementById('teacher-p2-grade').value);
+                    gameState.playerGrades[3] = Number(document.getElementById('teacher-p3-grade').value);
+                    gameState.playerGrades[4] = Number(document.getElementById('teacher-p4-grade').value);
+
+                    alert('Tingkat Kelas untuk Masing-Masing Pemain Berhasil Diterapkan!');
+                };
+            }
+
+            // Simpan Soal Kustom Baru
+            const btnSaveQ = document.getElementById('btn-save-question');
+            if (btnSaveQ) {
+                btnSaveQ.onclick = () => {
+                    const grade = Number(document.getElementById('new-q-grade').value);
+                    const subject = document.getElementById('new-q-subject').value;
+                    const qText = document.getElementById('new-q-text').value.trim();
+                    const opt0 = document.getElementById('new-q-opt0').value.trim();
+                    const opt1 = document.getElementById('new-q-opt1').value.trim();
+                    const opt2 = document.getElementById('new-q-opt2').value.trim();
+                    const opt3 = document.getElementById('new-q-opt3').value.trim();
+                    const correct = Number(document.getElementById('new-q-correct').value);
+
+                    if (!qText || !opt0 || !opt1 || !opt2 || !opt3) {
+                        alert('Mohon lengkapi semua kolom pertanyaan dan 4 pilihan jawaban!');
+                        return;
+                    }
+
+                    QUESTION_BANK.push({
+                        grade: grade,
+                        subject: subject,
+                        q: qText,
+                        options: [opt0, opt1, opt2, opt3],
+                        answer: correct
+                    });
+
+                    alert('Soal Baru Berhasil Disimpan ke Bank Soal!');
+                    document.getElementById('new-q-text').value = '';
+                    document.getElementById('new-q-opt0').value = '';
+                    document.getElementById('new-q-opt1').value = '';
+                    document.getElementById('new-q-opt2').value = '';
+                    document.getElementById('new-q-opt3').value = '';
+                };
+            }
+
+            // Tombol Restart / Main Lagi
+            const btnRestart = document.getElementById('btn-restart');
+            if (btnRestart) {
+                btnRestart.onclick = () => {
+                    for (let p = 1; p <= 4; p++) {
+                        gameState.positions[p] = 1;
+                        gameState.scores[p] = 0;
+                        updatePlayerMeshPos(p, 1, false);
+                    }
+                    gameState.currentPlayer = 1;
+                    document.getElementById('modal-winner').classList.add('hidden');
+                    updateUI();
+                };
+            }
         };
     </script>
 </body>
